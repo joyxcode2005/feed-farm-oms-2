@@ -13,4 +13,333 @@ datasource db {
   provider = "postgresql"
 }
 
+// Enums
+enum OrderStatus {
+  PENDING
+  CONFIRMED
+  DISPATCHED
+  DELIVERED
+  CANCELED
+}
 
+enum PaymentMethod {
+  CASH
+  CREDIT
+  ONLINE
+  UPI
+  BANK
+  OTHER
+}
+
+enum DiscountType {
+  FLAT
+  PERCENTAGE
+}
+
+enum StockTransactionType {
+  IN
+  OUT
+  ADJUSTMENT
+}
+
+enum FinishedStockTxnType {
+  PRODUCTION_IN
+  SALE_OUT
+  ADJUSTMENT
+}
+
+enum CustomerType {
+  SINGLE
+  DISTRIBUTER
+}
+
+enum AdminRole {
+  SUPER_ADMIN
+  ADMIN
+}
+
+enum MaterialUnit {
+  KG
+  TON
+}
+
+// Models
+model AdminUser {
+  id           String    @id @default(uuid())
+  name         String
+  email        String    @unique
+  phone        String    @unique
+  role         AdminRole @default(ADMIN)
+  passwordHash String
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  customersCreated             Customer[]                     @relation("CreatedByAdmin")
+  orders                       Order[]
+  payments                     Payment[]
+  rawMaterialStockTransactions RawMaterialStockTransaction[]
+  finishedStockTransactions    FinishedFeedStockTransaction[]
+  customers                    Customer[]
+  productionBatches            ProductionBatch[]
+}
+
+model Customer {
+  id               String       @id @default(uuid())
+  name             String
+  phone            String       @unique
+  address          String? // FIXED to optional
+  type             CustomerType @default(SINGLE)
+  state            String?
+  latitude         Float?
+  longitude        Float?
+  createdByAdminId String?
+  createdByAdmin   AdminUser?   @relation("CreatedByAdmin", fields: [createdByAdminId], references: [id])
+  createdAt        DateTime     @default(now())
+  updatedAt        DateTime     @updatedAt
+
+  orders                   Order[]
+  customerSummarySnapshots CustomerSummarySnapshot[]
+  adminUser                AdminUser?                @relation(fields: [adminUserId], references: [id])
+  adminUserId              String?
+
+  @@index([state])
+  @@index([createdAt])
+}
+
+model RawMaterial {
+  id        String       @id @default(uuid())
+  name      String       @unique
+  unit      MaterialUnit @default(KG)
+  createdAt DateTime     @default(now())
+  updatedAt DateTime     @updatedAt
+
+  stockTxns      RawMaterialStockTransaction[]
+  dailySnapshots RawMaterialDailySnapshot[]
+  batchUses      ProductionBatchMaterial[]
+}
+
+model RawMaterialStockTransaction {
+  id            String               @id @default(uuid())
+  rawMaterialId String
+  adminUserId   String
+  type          StockTransactionType
+  quantity      Float
+  referenceType String?
+  referenceId   String?
+  notes         String?
+  createdAt     DateTime             @default(now())
+
+  rawMaterial RawMaterial @relation(fields: [rawMaterialId], references: [id])
+  adminUser   AdminUser   @relation(fields: [adminUserId], references: [id])
+
+  @@index([rawMaterialId, createdAt])
+  @@index([adminUserId])
+}
+
+model RawMaterialDailySnapshot {
+  id             String   @id @default(uuid())
+  rawMaterialId  String
+  date           DateTime
+  openingStockKg Float
+  totalInKg      Float
+  totalOutKg     Float
+  closingStockKg Float
+  createdAt      DateTime @default(now())
+
+  rawMaterial RawMaterial @relation(fields: [rawMaterialId], references: [id])
+
+  @@unique([rawMaterialId, date])
+  @@index([date])
+}
+
+model AnimalType {
+  id        String   @id @default(uuid())
+  name      String   @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  categories FeedCategory[]
+}
+
+model FeedCategory {
+  id           String   @id @default(uuid())
+  animalTypeId String
+  name         String
+  unitSizeKg   Int      @default(50)
+  defaultPrice Float
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  animalType     AnimalType                     @relation(fields: [animalTypeId], references: [id])
+  orderItems     OrderItem[]
+  batches        ProductionBatch[]
+  stock          FinishedFeedStock?
+  stockTxns      FinishedFeedStockTransaction[]
+  dailySnapshots FinishedFeedDailySnapshot[]
+
+  @@unique([animalTypeId, name])
+  @@index([animalTypeId])
+}
+
+model FinishedFeedStock {
+  id                String   @id @default(uuid())
+  feedCategoryId    String   @unique
+  quantityAvailable Float    @default(0)
+  updatedAt         DateTime @updatedAt
+
+  feedCategory FeedCategory @relation(fields: [feedCategoryId], references: [id])
+}
+
+model FinishedFeedStockTransaction {
+  id                String               @id @default(uuid())
+  feedCategoryId    String
+  adminUserId       String
+  type              FinishedStockTxnType
+  quantityBags      Float
+  quantityKg        Float?
+  orderId           String?
+  productionBatchId String?
+  notes             String?
+  createdAt         DateTime             @default(now())
+
+  feedCategory    FeedCategory     @relation(fields: [feedCategoryId], references: [id])
+  adminUser       AdminUser        @relation(fields: [adminUserId], references: [id])
+  order           Order?           @relation(fields: [orderId], references: [id])
+  productionBatch ProductionBatch? @relation(fields: [productionBatchId], references: [id])
+
+  @@index([feedCategoryId, createdAt])
+  @@index([adminUserId])
+  @@index([orderId])
+}
+
+model FinishedFeedDailySnapshot {
+  id             String   @id @default(uuid())
+  feedCategoryId String
+  date           DateTime
+  openingBags    Float
+  inBags         Float
+  outBags        Float
+  closingBags    Float
+  createdAt      DateTime @default(now())
+
+  feedCategory FeedCategory @relation(fields: [feedCategoryId], references: [id])
+
+  @@unique([feedCategoryId, date])
+  @@index([date])
+}
+
+model ProductionBatch {
+  id             String   @id @default(uuid())
+  feedCategoryId String
+  adminUserId    String
+  batchNumber    String
+  producedBags   Float
+  producedKg     Float?
+  productionDate DateTime
+  createdAt      DateTime @default(now())
+
+  feedCategory FeedCategory                   @relation(fields: [feedCategoryId], references: [id])
+  adminUser    AdminUser                      @relation(fields: [adminUserId], references: [id])
+  materials    ProductionBatchMaterial[]
+  stockTxns    FinishedFeedStockTransaction[]
+
+  @@index([feedCategoryId, productionDate])
+  @@index([adminUserId])
+}
+
+model ProductionBatchMaterial {
+  id            String   @id @default(uuid())
+  batchId       String
+  rawMaterialId String
+  quantityKg    Float
+  createdAt     DateTime @default(now())
+
+  batch       ProductionBatch @relation(fields: [batchId], references: [id])
+  rawMaterial RawMaterial     @relation(fields: [rawMaterialId], references: [id])
+
+  @@index([batchId])
+  @@index([rawMaterialId])
+}
+
+model Order {
+  id            String        @id @default(uuid())
+  customerId    String
+  adminUserId   String
+  orderStatus   OrderStatus   @default(PENDING)
+  totalAmount   Float
+  discountType  DiscountType?
+  discountValue Float?
+  finalAmount   Float
+  paidAmount    Float         @default(0)
+  dueAmount     Float         @default(0)
+  deliveryDate  DateTime?
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+
+  customer  Customer                       @relation(fields: [customerId], references: [id])
+  adminUser AdminUser                      @relation(fields: [adminUserId], references: [id])
+  items     OrderItem[]
+  payments  Payment[]
+  stockTxns FinishedFeedStockTransaction[]
+
+  @@index([customerId, createdAt])
+  @@index([orderStatus])
+}
+
+model OrderItem {
+  id             String   @id @default(uuid())
+  orderId        String
+  feedCategoryId String
+  quantityBags   Int
+  pricePerBag    Float
+  subtotal       Float
+  createdAt      DateTime @default(now())
+
+  order        Order        @relation(fields: [orderId], references: [id])
+  feedCategory FeedCategory @relation(fields: [feedCategoryId], references: [id])
+
+  @@index([orderId])
+  @@index([feedCategoryId])
+}
+
+model Payment {
+  id            String        @id @default(uuid())
+  orderId       String
+  adminUserId   String?
+  amountPaid    Float
+  paymentDate   DateTime      @default(now())
+  paymentMethod PaymentMethod
+  note          String?
+
+  order     Order      @relation(fields: [orderId], references: [id])
+  adminUser AdminUser? @relation(fields: [adminUserId], references: [id])
+
+  @@index([orderId])
+  @@index([paymentDate])
+}
+
+model Expense {
+  id          String   @id @default(uuid())
+  category    String
+  amount      Float
+  note        String?
+  expenseDate DateTime
+  createdAt   DateTime @default(now())
+
+  @@index([expenseDate])
+}
+
+model CustomerSummarySnapshot {
+  id          String    @id @default(uuid())
+  customerId  String
+  date        DateTime
+  totalOrders Int
+  totalPaid   Float
+  totalDue    Float
+  lastOrderAt DateTime?
+
+  customer Customer @relation(fields: [customerId], references: [id])
+
+  @@unique([customerId, date])
+  @@index([date])
+}
