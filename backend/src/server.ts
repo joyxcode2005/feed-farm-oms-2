@@ -3,7 +3,7 @@ import cors from "cors";
 import express, { Request, Response } from "express";
 import { corsOptions } from "./config";
 import cookieParser from "cookie-parser";
-import adminRouter from "./routes/admin.route";
+import authRouter from "./routes/auth.router";
 
 dotenv.config();
 
@@ -27,7 +27,7 @@ app.get("/", (req: Request, res: Response) => {
 });
 
 // Routes
-app.use("/api/v1/admin", adminRouter);
+app.use("/api/v1/admin/auth", authRouter);
 
 app.listen(PORT, () => {
   console.log(`Server is listening on port ${PORT}`);
