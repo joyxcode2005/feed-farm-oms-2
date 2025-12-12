@@ -2,7 +2,7 @@ import dotenv from "dotenv";
 import cors from "cors";
 import express, { Request, Response } from "express";
 import { corsOptions } from "./config";
-
+import cookieParser from "cookie-parser";
 import adminRouter from "./routes/admin.route";
 
 dotenv.config();
@@ -13,6 +13,7 @@ const PORT = process.env.PORT || 8000;
 const app = express();
 
 // Middlewares
+app.use(cookieParser());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(cors(corsOptions));
