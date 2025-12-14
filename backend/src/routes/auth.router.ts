@@ -1,7 +1,9 @@
 import { Request, Response, Router } from "express";
 import { adminLoginSchema, adminUpdateSchema } from "../config/types";
 import {
+  deleteAdminUser,
   existingAdminUser,
+  exsistingAdminiUserwithId,
   getAdminUserData,
   getAllAdminUsers,
   updateAdminUserData,
@@ -90,7 +92,7 @@ router.post("/login", async (req: Request, res: Response) => {
 
 // Route to remove the cookie and logout the admin
 router.post("/logout", (req: Request, res: Response) => {
-  res.clearCookie("token", {
+  res.clearCookie("admin_token", {
     httpOnly: true,
     sameSite: "strict",
     path: "/",
@@ -217,16 +219,37 @@ router.delete("/delete/:id", async (req: Request, res: Response) => {
     });
 
   // Check if the logged in admin is a SUPER_ADMIN
-  const existingAdmin = await existingAdminUser(adminId);
-  const existingAdminToDelete = await existingAdminUser(id);
+  const existingAdmin = await exsistingAdminiUserwithId(adminId);
+  const existingAdminToDelete = await exsistingAdminiUserwithId(id);
 
-  if (existingAdmin?.role !== "SUPER_ADMIN" || existingAdminToDelete?.role !== "ADMIN")
+  if (existingAdmin?.role === "SUPER_ADMIN" && existingAdminToDelete?.role === "ADMIN") {
+    try {
+      const deletedAdminUser = await deleteAdminUser(id)
+
+      if (!deletedAdminUser)
+        return res.status(400).json({
+          success: false,
+          message: "Failed to delete Admin User!!",
+        });
+
+      return res.status(200).json({
+        success: true,
+        message: "Admin User Deleted successfully!!",
+        deletedAdminUser
+      });
+    } catch (error) {
+      return res.status(500).json({
+        success: false,
+        message: "Internal Server Error!!!",
+      });
+    }
+  }
+  else {
     return res.status(401).json({
       success: false,
       message: "Unauthorized!!",
     });
-
-  
+  }
 });
 
 export default router;
