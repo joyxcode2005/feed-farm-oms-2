@@ -8,6 +8,7 @@ import { Admin, SidebarPageType } from "@/src/config";
 import { sidebarItems } from "@/src/helpers/sidebarItems";
 import Admins from "@/src/pages/Admins";
 import SettingsPage from "@/src/pages/Settings";
+import MapPage from "@/src/pages/MapPage";
 
 export default function AdminPage() {
   const { admin, loading, logout } = useAdminAuth();
@@ -44,6 +45,9 @@ export default function AdminPage() {
 
       case "Settings":
         return <SettingsPage admin={admin} />;
+
+      case "Map":
+        return <MapPage />;
 
       default:
         return <div>Page not found</div>;

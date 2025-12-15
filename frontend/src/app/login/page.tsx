@@ -19,7 +19,7 @@ export default function LoginPage() {
     setLoading(true);
 
     try {
-      const response = await api.post("/login", formData);
+      const response = await api.post("/auth/login", formData);
 
       // Axios puts response data on `response.data`
       if (response.status === 200) {
