@@ -13,6 +13,7 @@ import {
   getAllRawMaterials,
   getAllRawMaterialTxns,
   getRawMaterialLedger,
+  getRawMaterialSnapshots,
 } from "../controllers/rawMaterial.controller";
 
 const router = Router();
@@ -331,4 +332,53 @@ router.get("/:id/ledger", async (req: Request, res: Response) => {
   }
 });
 
+// Route to get the daily snapshots of raw material
+router.get("/:id/snapshots", async (req: Request, res: Response) => {
+  const rawMaterialId = req.params.id;
+  const { from, to } = req.query;
+
+  try {
+    // Get existing raw material
+    const material = await existingRawMaterial(rawMaterialId);
+
+    if (!material) {
+      return res.status(404).json({
+        success: false,
+        message: "Raw material not found",
+      });
+    }
+
+    // Set up the where clause, if from and to is mentioned then add them to the where clause as from and to are optional!!
+    const whereClause: any = { rawMaterialId };
+
+    if (from || to) {
+      whereClause.date = {};
+      if (from) whereClause.date.gte = new Date(from as string);
+      if (to) whereClause.date.lte = new Date(to as string);
+    }
+
+    // Get the snapshot for the raw material
+    const snapshots = await getRawMaterialSnapshots(whereClause);
+
+    if (!snapshots)
+      return res.status(401).json({
+        success: false,
+        message: "Failed to get raw material snapshots!!",
+      });
+
+    return res.status(201).json({
+      success: true,
+      message: "Raw material snapshot fetched!!",
+      data: {
+        rawMaterial: material,
+        snapshots,
+      },
+    });
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      message: "Internal Server Error!!",
+    });
+  }
+});
 export default router;

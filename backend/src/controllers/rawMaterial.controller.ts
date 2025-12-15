@@ -103,3 +103,17 @@ export function getRawMaterialLedger(whereClause: any) {
     },
   });
 }
+
+export function getRawMaterialSnapshots(whereClause: any) {
+  return prisma.rawMaterialDailySnapshot.findMany({
+    where: whereClause,
+    orderBy: { date: "asc" },
+    select: {
+      date: true,
+      openingStockKg: true,
+      totalInKg: true,
+      totalOutKg: true,
+      closingStockKg: true,
+    },
+  });
+}
