@@ -14,10 +14,10 @@ export default function AdminHeader({
         <h1 className="text-xl font-semibold">STAR FEED</h1>
 
         <div className="flex items-center gap-4">
-          <span className="text-sm">{admin.name}</span>
+          <span className="text-lg font-semibold">{admin.name}</span>
           <button
             onClick={onLogout}
-            className="flex items-center gap-2 px-3 py-2 text-sm hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded"
+            className="flex items-center gap-2 px-3 py-2 text-sm bg-red-500 dark:hover:bg-red-800 rounded cursor-pointer"
           >
             <LogOut className="w-4 h-4" />
             Logout

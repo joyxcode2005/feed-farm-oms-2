@@ -4,15 +4,11 @@
 import { useEffect, useState } from "react";
 import { api } from "@/src/config";
 import toast from "react-hot-toast";
-import { 
-  Plus, 
-  Minus, 
-  Package, 
-  History, 
-} from "lucide-react";
+import { Plus, Minus, Package, History, SlidersHorizontal } from "lucide-react";
 import CreateRawMaterialModal from "../components/CreateRawMaterialModal";
 import StockActionModal from "../components/StockActionModal";
 import LedgerModal from "../components/LedgerModal";
+import AdjustmentModal from "../components/AdjustmentModal";
 
 // Define the interface based on your API response
 interface RawMaterial {
@@ -25,12 +21,20 @@ interface RawMaterial {
 export default function RawMaterials() {
   const [materials, setMaterials] = useState<RawMaterial[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  
+
   // Modals state
   const [isCreating, setIsCreating] = useState(false);
-  const [selectedMaterial, setSelectedMaterial] = useState<RawMaterial | null>(null);
+  const [selectedMaterial, setSelectedMaterial] = useState<RawMaterial | null>(
+    null
+  );
   const [stockAction, setStockAction] = useState<"IN" | "OUT" | null>(null);
-  const [ledgerMaterial, setLedgerMaterial] = useState<RawMaterial | null>(null);
+
+  // Specific state for Ledger and Adjustment modals
+  const [ledgerMaterial, setLedgerMaterial] = useState<RawMaterial | null>(
+    null
+  );
+  const [adjustmentMaterial, setAdjustmentMaterial] =
+    useState<RawMaterial | null>(null);
 
   const fetchMaterials = async () => {
     try {
@@ -119,8 +123,8 @@ export default function RawMaterials() {
               ) : materials.length > 0 ? (
                 // DATA ROWS
                 materials.map((m) => (
-                  <tr 
-                    key={m.id} 
+                  <tr
+                    key={m.id}
                     className="group hover:bg-zinc-50/50 dark:hover:bg-zinc-800/50 transition-colors"
                   >
                     <td className="px-6 py-4 font-medium text-zinc-900 dark:text-zinc-100">
@@ -133,38 +137,60 @@ export default function RawMaterials() {
                     </td>
                     <td className="px-6 py-4">
                       <div className="flex items-center gap-2">
-                        <span className={`text-lg font-semibold ${m.currentStock < 0 ? 'text-red-600' : 'text-zinc-700 dark:text-zinc-300'}`}>
+                        <span
+                          className={`text-lg font-semibold ${
+                            m.currentStock < 0
+                              ? "text-red-600"
+                              : "text-zinc-700 dark:text-zinc-300"
+                          }`}
+                        >
                           {m.currentStock.toLocaleString()}
                         </span>
-                        <span className="text-zinc-400 text-xs mt-1">{m.unit}</span>
+                        <span className="text-zinc-400 text-xs mt-1">
+                          {m.unit}
+                        </span>
                       </div>
                     </td>
                     <td className="px-6 py-4 text-right">
                       <div className="flex justify-end items-center gap-2">
+                        {/* Stock In Button */}
                         <button
-                          onClick={() => openStockModal(m, 'IN')}
-                          className="flex items-center gap-1 px-3 py-1.5 text-xs font-medium text-emerald-700 bg-emerald-50 hover:bg-emerald-100 dark:bg-emerald-900/20 dark:text-emerald-400 dark:hover:bg-emerald-900/30 rounded-md transition-colors border border-emerald-100 dark:border-emerald-800/50"
+                          onClick={() => openStockModal(m, "IN")}
+                          className="flex items-center gap-1 px-3 py-1.5 text-xs font-medium text-emerald-700 bg-emerald-50 hover:bg-emerald-100 dark:bg-emerald-900/20 dark:text-emerald-400 dark:hover:bg-emerald-900/30 rounded-md transition-colors border border-emerald-100 dark:border-emerald-800/50 cursor-pointer"
                           title="Add Stock (Purchase)"
                         >
                           <Plus className="w-3 h-3" />
                           Stock In
                         </button>
-                        
+
+                        {/* Stock Out Button */}
                         <button
-                          onClick={() => openStockModal(m, 'OUT')}
-                          className="flex items-center gap-1 px-3 py-1.5 text-xs font-medium text-amber-700 bg-amber-50 hover:bg-amber-100 dark:bg-amber-900/20 dark:text-amber-400 dark:hover:bg-amber-900/30 rounded-md transition-colors border border-amber-100 dark:border-amber-800/50"
+                          onClick={() => openStockModal(m, "OUT")}
+                          className="flex items-center gap-1 px-3 py-1.5 text-xs font-medium text-amber-700 bg-amber-50 hover:bg-amber-100 dark:bg-amber-900/20 dark:text-amber-400 dark:hover:bg-amber-900/30 rounded-md transition-colors border border-amber-100 dark:border-amber-800/50 cursor-pointer"
                           title="Remove Stock (Usage)"
                         >
                           <Minus className="w-3 h-3" />
                           Stock Out
                         </button>
 
+                        {/* Adjustment Button */}
+                        <button
+                          onClick={() => setAdjustmentMaterial(m)}
+                          className="flex items-center gap-1 px-3 py-1.5 text-xs font-medium text-violet-700 bg-violet-50 hover:bg-violet-100 dark:bg-violet-900/20 dark:text-violet-400 dark:hover:bg-violet-900/30 rounded-md transition-colors border border-violet-100 dark:border-violet-800/50 cursor-pointer"
+                          title="Correct Stock Level"
+                        >
+                          <SlidersHorizontal className="w-3 h-3" />
+                          Adjust
+                        </button>
+
+                        {/* View Ledger Button */}
                         <button
                           onClick={() => setLedgerMaterial(m)}
-                          className="p-1.5 text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300 transition-colors"
+                          className="flex items-center gap-1 px-3 py-1.5 text-xs font-medium text-blue-700 bg-blue-50 hover:bg-blue-100 dark:bg-blue-900/20 dark:text-blue-400 dark:hover:bg-blue-900/30 rounded-md transition-colors border border-blue-100 dark:border-blue-800/50 cursor-pointer"
                           title="View History"
                         >
-                          <History className="w-4 h-4" />
+                          <History className="w-3 h-3" />
+                          View Ledger
                         </button>
                       </div>
                     </td>
@@ -177,8 +203,12 @@ export default function RawMaterials() {
                     <div className="w-12 h-12 bg-zinc-100 dark:bg-zinc-800 rounded-full flex items-center justify-center mx-auto mb-3 text-zinc-400">
                       <Package className="w-6 h-6" />
                     </div>
-                    <h3 className="text-zinc-900 dark:text-zinc-100 font-medium">No materials found</h3>
-                    <p className="text-zinc-500 text-sm mt-1">Get started by adding raw materials.</p>
+                    <h3 className="text-zinc-900 dark:text-zinc-100 font-medium">
+                      No materials found
+                    </h3>
+                    <p className="text-zinc-500 text-sm mt-1">
+                      Get started by adding raw materials.
+                    </p>
                   </td>
                 </tr>
               )}
@@ -218,6 +248,17 @@ export default function RawMaterials() {
         <LedgerModal
           material={ledgerMaterial}
           onClose={() => setLedgerMaterial(null)}
+        />
+      )}
+
+      {adjustmentMaterial && (
+        <AdjustmentModal
+          material={adjustmentMaterial}
+          onClose={() => setAdjustmentMaterial(null)}
+          onSuccess={() => {
+            setAdjustmentMaterial(null);
+            fetchMaterials();
+          }}
         />
       )}
     </div>
