@@ -8,8 +8,6 @@ import {
   getAllAdminUsers,
   updateAdminUserData,
 } from "../controllers/auth.controller";
-import rawMaterialRouter from "./rawMaterial.routes";
-import finishedFeedRouter from "./finishedFeed.routes";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 
@@ -328,8 +326,5 @@ router.post("/create-admin", async (req: Request, res: Response) => {
   }
 });
 
-
-router.use("/raw-materials", rawMaterialRouter);
-router.use("/finished-feed", finishedFeedRouter);
 
 export default router;

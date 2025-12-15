@@ -3,6 +3,7 @@ import { SidebarPageType } from "../config";
 import {
   Factory,
   LayoutDashboard,
+  Map,
   Package,
   Settings,
   ShoppingCart,
@@ -43,5 +44,10 @@ export const sidebarItems: {
     key: "Settings",
     label: "Settings",
     icon: <Settings size={16} />,
+  },
+  {
+    key: "Map",
+    label: "Map",
+    icon: <Map size={16} />,
   },
 ];

@@ -4,6 +4,9 @@ import express, { Request, Response } from "express";
 import { corsOptions } from "./config";
 import cookieParser from "cookie-parser";
 import authRouter from "./routes/auth.routes";
+import customersRouter from "./routes/customer.routes";
+import rawMaterialRouter from "./routes/rawMaterial.routes";
+import { adminUserMiddleware } from "./middlewares/auth.middleware";
 
 dotenv.config();
 
@@ -28,6 +31,13 @@ app.get("/", (req: Request, res: Response) => {
 
 // Routes
 app.use("/api/v1/admin/auth", authRouter);
+
+// Middleware to protect the route
+app.use(adminUserMiddleware);
+
+// Other sub routes for the admin
+app.use("/api/v1/admin/raw-materials", rawMaterialRouter);
+app.use("/api/v1/admin/customers", customersRouter);
 
 app.listen(PORT, () => {
   console.log(`Server is listening on port ${PORT}`);

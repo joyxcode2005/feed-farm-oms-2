@@ -16,6 +16,7 @@ export const SidebarPages = [
   "Orders",
   "Admins",
   "Settings",
+  "Map",
 ] as const;
 
 export type SidebarPageType = (typeof SidebarPages)[number];

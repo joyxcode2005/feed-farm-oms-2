@@ -178,7 +178,7 @@ router.post("/:id/stock/out", async (req: Request, res: Response) => {
     // Get the raw material id form the query params
     const rawMaterialId = req.params.id;
 
-    const material = await checkExistingRawMaterial(rawMaterialId);
+    const material = await existingRawMaterial(rawMaterialId);
 
     if (!material) {
       return res.status(404).json({
@@ -253,7 +253,7 @@ router.post("/:id/stock/adjust", async (req: Request, res: Response) => {
     const rawMaterialId = req.params.id;
 
     // Check if raw material already exists
-    const material = await checkExistingRawMaterial(rawMaterialId);
+    const material = await existingRawMaterial(rawMaterialId);
 
     if (!material)
       return res.status(404).json({
