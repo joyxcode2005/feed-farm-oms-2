@@ -3,7 +3,7 @@ import cors from "cors";
 import express, { Request, Response } from "express";
 import { corsOptions } from "./config";
 import cookieParser from "cookie-parser";
-import authRouter from "./routes/auth.router";
+import authRouter from "./routes/auth.routes";
 
 dotenv.config();
 
