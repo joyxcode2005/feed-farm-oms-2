@@ -1,40 +1,33 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
-'use client';
+"use client";
 
-import React, { useState } from 'react';
-import { useRouter } from 'next/navigation';
-import { Eye, EyeOff } from 'lucide-react';
-
-const API_BASE = 'http://localhost:8080/api/v1/admin/auth'; // Update to your backend URL
+import React, { useState } from "react";
+import { useRouter } from "next/navigation";
+import { Eye, EyeOff } from "lucide-react";
+import { api } from "@/src/config";
+import toast from "react-hot-toast";
 
 export default function LoginPage() {
   const router = useRouter();
-  const [formData, setFormData] = useState({ email: '', password: '' });
+  const [formData, setFormData] = useState({ email: "", password: "" });
   const [showPassword, setShowPassword] = useState(false);
-  const [error, setError] = useState('');
+  const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
   const handleSubmit = async () => {
-    setError('');
+    setError("");
     setLoading(true);
 
     try {
-      const response = await fetch(`${API_BASE}/login`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify(formData),
-      });
+      const response = await api.post("/login", formData);
 
-      const data = await response.json();
-
-      if (response.ok) {
-        router.push('/admin'); // Redirect to dashboard
-      } else {
-        setError(data.message || 'Login failed');
+      // Axios puts response data on `response.data`
+      if (response.status === 200) {
+        router.replace("/dashboard");
       }
-    } catch (error) {
-      setError('Connection error. Please try again.');
+    } catch (err) {
+      // Axios error handling
+      toast.error("Login failed. Please check your credentials.");
     } finally {
       setLoading(false);
     }
@@ -62,8 +55,10 @@ export default function LoginPage() {
               <input
                 type="email"
                 value={formData.email}
-                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                onKeyDown={(e) => e.key === 'Enter' && handleSubmit()}
+                onChange={(e) =>
+                  setFormData({ ...formData, email: e.target.value })
+                }
+                onKeyDown={(e) => e.key === "Enter" && handleSubmit()}
                 className="w-full px-4 py-2 border border-zinc-300 dark:border-zinc-700 rounded-lg bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-50 focus:outline-none focus:ring-2 focus:ring-zinc-900 dark:focus:ring-zinc-700"
                 required
               />
@@ -75,10 +70,12 @@ export default function LoginPage() {
               </label>
               <div className="relative">
                 <input
-                  type={showPassword ? 'text' : 'password'}
+                  type={showPassword ? "text" : "password"}
                   value={formData.password}
-                  onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                  onKeyDown={(e) => e.key === 'Enter' && handleSubmit()}
+                  onChange={(e) =>
+                    setFormData({ ...formData, password: e.target.value })
+                  }
+                  onKeyDown={(e) => e.key === "Enter" && handleSubmit()}
                   className="w-full px-4 py-2 border border-zinc-300 dark:border-zinc-700 rounded-lg bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-50 focus:outline-none focus:ring-2 focus:ring-zinc-900 dark:focus:ring-zinc-700"
                   required
                 />
@@ -87,7 +84,11 @@ export default function LoginPage() {
                   onClick={() => setShowPassword(!showPassword)}
                   className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-500 dark:text-zinc-400"
                 >
-                  {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                  {showPassword ? (
+                    <EyeOff className="w-5 h-5" />
+                  ) : (
+                    <Eye className="w-5 h-5" />
+                  )}
                 </button>
               </div>
             </div>
@@ -97,7 +98,7 @@ export default function LoginPage() {
               disabled={loading}
               className="w-full bg-zinc-900 dark:bg-zinc-800 text-white py-2 rounded-lg hover:bg-zinc-800 dark:hover:bg-zinc-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {loading ? 'Logging in...' : 'Login'}
+              {loading ? "Logging in..." : "Login"}
             </button>
           </div>
         </div>

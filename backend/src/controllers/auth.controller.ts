@@ -56,8 +56,13 @@ export async function updateAdminUserData(
   });
 }
 
-export async function getAllAdminUsers() {
+export async function getAllAdminUsers(adminId: string) {
   return await prisma.adminUser.findMany({
+    where: {
+      NOT: {
+        id: adminId,
+      },
+    },
     select: {
       id: true,
       name: true,
@@ -71,7 +76,7 @@ export async function getAllAdminUsers() {
 export async function deleteAdminUser(adminId: string) {
   return await prisma.adminUser.delete({
     where: {
-      id: adminId
+      id: adminId,
     },
   });
 }

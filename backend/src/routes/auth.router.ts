@@ -3,7 +3,6 @@ import { adminUserMiddleware } from "../middlewares/auth.middleware";
 import {
   deleteAdminUser,
   createNewAdminUser,
-  exsistingAdminiUserwithId,
   findAdminUser,
   getAllAdminUsers,
   updateAdminUserData,
@@ -184,9 +183,10 @@ router.put("/update", async (req: Request, res: Response) => {
 
 // Route to get all admins
 router.get("/all", async (req: Request, res: Response) => {
+  const adminId = (req as any).adminId;
   try {
     // Fetch all admin users data
-    const adminUsers = await getAllAdminUsers();
+    const adminUsers = await getAllAdminUsers(adminId);
 
     if (!adminUsers)
       return res.status(404).json({
@@ -222,12 +222,12 @@ router.delete("/delete/:id", async (req: Request, res: Response) => {
     });
 
   // Check if the logged in admin is a SUPER_ADMIN
-  const existingAdmin = await existingAdminUser(adminId);
-  const existingAdminToDelete = await existingAdminUser(id);
+  const existingAdmin = await findAdminUser(adminId);
+  const existingAdminToDelete = await findAdminUser(id);
 
   if (existingAdmin?.role === "SUPER_ADMIN" && existingAdminToDelete?.role === "ADMIN") {
     try {
-      const deletedAdminUser = await deleteAdminUser(id)
+      const deletedAdminUser = await deleteAdminUser(id);
 
       if (!deletedAdminUser)
         return res.status(400).json({
@@ -238,7 +238,7 @@ router.delete("/delete/:id", async (req: Request, res: Response) => {
       return res.status(200).json({
         success: true,
         message: "Admin User Deleted successfully!!",
-        deletedAdminUser
+        deletedAdminUser,
       });
     } catch (error) {
       return res.status(500).json({
@@ -246,14 +246,84 @@ router.delete("/delete/:id", async (req: Request, res: Response) => {
         message: "Internal Server Error!!!",
       });
     }
-  }
-  else {
+  } else {
     return res.status(401).json({
       success: false,
       message: "Unauthorized!!",
     });
+  }
+});
 
-  
+// An super admin can create an normal admin user
+router.post("/create-admin", async (req: Request, res: Response) => {
+  try {
+    // Parse the request body properly using zod schema
+    const { success, error, data } = createNewAdminSchema.safeParse(req.body);
+    const adminId = (req as any).adminId;
+
+    if (!success)
+      return res.status(401).json({
+        success: false,
+        message: "Invalid Input!!",
+        error: error.flatten(),
+      });
+
+    // Fetch the deatails of the logged in admin user
+    const loggedInAdminUser = await findAdminUser(adminId);
+
+    if (!loggedInAdminUser)
+      return res.status(404).json({
+        success: false,
+        message: "Error fetching details!!!",
+      });
+
+    if (loggedInAdminUser.role !== "SUPER_ADMIN")
+      return res.status(401).json({
+        success: false,
+        message: "Unauthorized!!",
+      });
+
+    // Destructure required data
+    const { name, email, phone, password } = data;
+
+    // Check if the admin user with same phone already exists!!
+    const existingAdminUserWithSamePhone = await findAdminUser(phone);
+
+    if (existingAdminUserWithSamePhone)
+      return res.status(401).json({
+        success: false,
+        message: "Admin user with the same phone already exists!!",
+      });
+
+    // Hash the password
+    const hashedPassword = await bcrypt.hash(password, 10);
+
+    if (!hashedPassword)
+      return res.status(402).json({
+        success: false,
+        message: "Failed to hash the password!!",
+      });
+
+    // Create new admin user
+    const newAdminUser = await createNewAdminUser(name, email, phone, hashedPassword, "ADMIN");
+
+    if (!newAdminUser)
+      return res.status(402).json({
+        success: false,
+        message: "Faild to create admin user!!",
+      });
+
+    return res.status(202).json({
+      success: true,
+      message: "New Admin created successfully!!",
+      newAdminUser,
+    });
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      message: "Internal Server Error!!",
+    });
+  }
 });
 
 export default router;
