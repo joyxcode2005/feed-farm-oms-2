@@ -9,6 +9,7 @@ import { sidebarItems } from "@/src/helpers/sidebarItems";
 import Admins from "@/src/pages/Admins";
 import SettingsPage from "@/src/pages/Settings";
 import MapPage from "@/src/pages/MapPage";
+import RawMaterials from "@/src/pages/RawMaterials";
 
 export default function AdminPage() {
   const { admin, loading, logout } = useAdminAuth();
@@ -32,7 +33,7 @@ export default function AdminPage() {
         return <div>Dashboard Page</div>;
 
       case "Raw Material Stock":
-        return <div>Raw Material Stock</div>;
+        return <RawMaterials />;
 
       case "Finished Feed Stock":
         return <div>Finished Feed Stock</div>;
