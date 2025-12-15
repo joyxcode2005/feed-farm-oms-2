@@ -61,11 +61,11 @@ async function main() {
   log.info("Initializing admin seeding script...");
 
   const adminData: SeedAdminInput = {
-    name: "Joy Sengupta",
-    email: "joysengupta252005@gmail.com",
-    password: "joy@123",
-    phone: "8777699459",
-    role: "SUPER_ADMIN",
+    name: "James Hunt",
+    email: "jamehunt@gmail.com",
+    password: "james@123",
+    phone: "9836763798",
+    role: "ADMIN",
   };
 
   try {
@@ -81,5 +81,6 @@ async function main() {
     log.info("Prisma Client disconnected.");
   }
 }
+
 
 main();

@@ -17,6 +17,21 @@ export async function findAdminUser(identifier: string) {
   });
 }
 
+export async function getAdminUserData(id: string) {
+  return await prisma.adminUser.findFirst({
+    where: {
+      id,
+    },
+    select: {
+      id: true,
+      name: true,
+      email: true,
+      phone: true,
+      role: true,
+    },
+  });
+}
+
 export async function updateAdminUserData(
   adminId: string,
   name?: string,
@@ -49,6 +64,14 @@ export async function getAllAdminUsers() {
       email: true,
       phone: true,
       role: true,
+    },
+  });
+}
+
+export async function deleteAdminUser(adminId: string) {
+  return await prisma.adminUser.delete({
+    where: {
+      id: adminId
     },
   });
 }
