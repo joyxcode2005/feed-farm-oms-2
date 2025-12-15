@@ -232,7 +232,7 @@ router.post("/:id/stock/out", async (req: Request, res: Response) => {
 });
 
 // Route to add a raw material stock (ADJUSTMENT)
-router.post("/:id/stock/out", async (req: Request, res: Response) => {
+router.post("/:id/stock/adjust", async (req: Request, res: Response) => {
   try {
     // Safely parse the request body
     const { success, error, data } = rawMaterialStockAdjustSchema.safeParse(req.body);
@@ -381,4 +381,5 @@ router.get("/:id/snapshots", async (req: Request, res: Response) => {
     });
   }
 });
+
 export default router;
