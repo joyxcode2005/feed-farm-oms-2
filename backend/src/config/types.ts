@@ -47,3 +47,33 @@ export const rawMaterialStockAdjustSchema = z.object({
   }),
   reason: z.string().min(1, "Reason is required!!"),
 });
+
+export const productionSchema = z.object({
+  feedCategoryId: z.string().uuid(),
+  producedBags: z.number().positive(),
+  productionDate: z.string(),
+  notes: z.string().optional(),
+  materialsUsed: z.array(
+    z.object({
+      rawMaterialId: z.string().uuid(),
+      quantity: z.number().positive(),
+    }),
+  ),
+});
+
+export const finishedFeedSaleSchema = z.object({
+  feedCategoryId: z.string().uuid(),
+  orderId: z.string().uuid(),
+  quantityBags: z.number().positive(),
+  adminUserId: z.string().uuid(),
+  notes: z.string().optional(),
+});
+
+export const finishedFeedAdjustSchema = z.object({
+  feedCategoryId: z.string().uuid(),
+  quantityBags: z.number().refine((v) => v !== 0, {
+    message: "Adjustment quantity cannot be zero",
+  }),
+  adminUserId: z.string().uuid(),
+  reason: z.string().min(1, "Reason is required"),
+});

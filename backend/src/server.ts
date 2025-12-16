@@ -6,6 +6,7 @@ import cookieParser from "cookie-parser";
 import authRouter from "./routes/auth.routes";
 import customersRouter from "./routes/customer.routes";
 import rawMaterialRouter from "./routes/rawMaterial.routes";
+import finishedFeedRouter from "./routes/finishedFeed.routes";
 import { adminUserMiddleware } from "./middlewares/auth.middleware";
 
 dotenv.config();
@@ -37,6 +38,7 @@ app.use(adminUserMiddleware);
 
 // Other sub routes for the admin
 app.use("/api/v1/admin/raw-materials", rawMaterialRouter);
+app.use("/api/v1/admin/finished-feed", finishedFeedRouter);
 app.use("/api/v1/admin/customers", customersRouter);
 
 app.listen(PORT, () => {
