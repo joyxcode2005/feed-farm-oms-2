@@ -77,3 +77,24 @@ export const finishedFeedAdjustSchema = z.object({
   adminUserId: z.string().uuid(),
   reason: z.string().min(1, "Reason is required"),
 });
+
+export const createCustomerSchema = z.object({
+  name: z.string().min(1, "Name is required"),
+  phone: z.string().min(8, "Phone is required"),
+  address: z.string().optional(),
+  type: z.enum(["SINGLE", "DISTRIBUTER"]).optional(),
+  state: z.string().optional(),
+  latitude: z.number().optional(),
+  longitude: z.number().optional(),
+  createdByAdminId: z.string().uuid().optional(),
+});
+
+export const updateCustomerSchema = z.object({
+  name: z.string().min(1).optional(),
+  phone: z.string().min(8).optional(),
+  address: z.string().optional(),
+  type: z.enum(["SINGLE", "DISTRIBUTER"]).optional(),
+  state: z.string().optional(),
+  latitude: z.number().optional(),
+  longitude: z.number().optional(),
+});
