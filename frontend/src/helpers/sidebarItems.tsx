@@ -1,3 +1,5 @@
+// frontend/src/helpers/sidebarItems.tsx
+
 import React from "react";
 import { SidebarPageType } from "../config";
 import {
@@ -8,6 +10,7 @@ import {
   Settings,
   ShoppingCart,
   Users,
+  UserCircle, // <--- Import this
 } from "lucide-react";
 
 export const sidebarItems: {
@@ -34,6 +37,11 @@ export const sidebarItems: {
     key: "Orders",
     label: "Orders",
     icon: <ShoppingCart size={16} />,
+  },
+  {
+    key: "Customers", 
+    label: "Customers",
+    icon: <UserCircle size={16} />,
   },
   {
     key: "Admins",

@@ -10,12 +10,14 @@ import Admins from "@/src/pages/Admins";
 import SettingsPage from "@/src/pages/Settings";
 import MapPage from "@/src/pages/MapPage";
 import RawMaterials from "@/src/pages/RawMaterials";
+import FinishedFeedStock from "@/src/pages/FinishedFeedStock";
+import Customers from "@/src/pages/Customers";
+import Dashboard from "@/src/pages/Dashboard"; // <--- Import
 
 export default function AdminPage() {
   const { admin, loading, logout } = useAdminAuth();
   const [page, setPage] = useState<SidebarPageType>("Dashboard");
 
-  // Check if still loading then show loading state
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -26,20 +28,22 @@ export default function AdminPage() {
 
   if (!admin) return null;
 
-  // This is a function which renders page based on current state
   function renderPage(page: SidebarPageType, admin: Admin) {
     switch (page) {
       case "Dashboard":
-        return <div>Dashboard Page</div>;
+        return <Dashboard onNavigate={(p) => setPage(p)} />; // <--- Update
 
       case "Raw Material Stock":
         return <RawMaterials />;
 
       case "Finished Feed Stock":
-        return <div>Finished Feed Stock</div>;
+        return <FinishedFeedStock />;
 
       case "Orders":
         return <div>Orders</div>;
+
+      case "Customers":
+        return <Customers />;
 
       case "Admins":
         return <Admins currentAdmin={admin} />;

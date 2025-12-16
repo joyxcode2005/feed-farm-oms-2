@@ -1,3 +1,5 @@
+// frontend/src/config/index.ts
+
 import axios from "axios";
 
 const BACKEND_URL = "http://localhost:8080/api/v1/admin";
@@ -14,6 +16,7 @@ export const SidebarPages = [
   "Raw Material Stock",
   "Finished Feed Stock",
   "Orders",
+  "Customers",
   "Admins",
   "Settings",
   "Map",
