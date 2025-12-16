@@ -160,14 +160,21 @@ router.post("/adjust", async (req: Request, res: Response) => {
       message: "Finished feed stock adjusted successfully",
       data: result,
     });
-  } catch (error) {
-    console.error("Finished feed adjustment failed:", error);
-
-    return res.status(500).json({
+  } catch (error: any) {
+  if (error.message === "FEED_CATEGORY_NOT_FOUND") {
+    return res.status(404).json({
       success: false,
-      message: "Internal Server Error!!",
+      message: "Feed category does not exist"
     });
   }
+
+  console.error("Finished feed adjustment failed:", error);
+
+  return res.status(500).json({
+    success: false,
+    message: "Internal Server Error!!",
+  });
+}
 });
 
 // Route to get finished feed ledger

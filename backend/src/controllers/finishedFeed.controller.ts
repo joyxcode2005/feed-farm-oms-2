@@ -164,7 +164,17 @@ export async function adjustFinishedFeedStockDB(input: FinishedFeedAdjustmentInp
   const { feedCategoryId, quantityBags, adminUserId, reason } = input;
 
   return prisma.$transaction(async (tx) => {
-    // 1. Ensure stock row exists (create if missing)
+    // 0. Ensure feed category exists
+    const category = await tx.feedCategory.findUnique({
+      where: { id: feedCategoryId },
+      select: { id: true }
+    });
+
+    if (!category) {
+      throw new Error("FEED_CATEGORY_NOT_FOUND");
+    }
+
+    // 1. Ensure stock row exists (safe now)
     const stock = await tx.finishedFeedStock.upsert({
       where: { feedCategoryId },
       update: {
@@ -189,12 +199,10 @@ export async function adjustFinishedFeedStockDB(input: FinishedFeedAdjustmentInp
       },
     });
 
-    return {
-      stock,
-      ledger,
-    };
+    return { stock, ledger };
   });
 }
+
 
 interface GetFinishedFeedLedgerInput {
   feedCategoryId: string;

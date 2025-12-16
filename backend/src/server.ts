@@ -8,6 +8,8 @@ import customersRouter from "./routes/customer.routes";
 import rawMaterialRouter from "./routes/rawMaterial.routes";
 import finishedFeedRouter from "./routes/finishedFeed.routes";
 import { adminUserMiddleware } from "./middlewares/auth.middleware";
+import animaltypesRouter from "./routes/animalType.routes";
+import feedcategoryRouter from "./routes/feedCategory.routes"
 
 dotenv.config();
 
@@ -40,6 +42,8 @@ app.use(adminUserMiddleware);
 app.use("/api/v1/admin/raw-materials", rawMaterialRouter);
 app.use("/api/v1/admin/finished-feed", finishedFeedRouter);
 app.use("/api/v1/admin/customers", customersRouter);
+app.use("/api/v1/admin/animal-types", animaltypesRouter);
+app.use("/api/v1/admin/feed-categories", feedcategoryRouter);
 
 app.listen(PORT, () => {
   console.log(`Server is listening on port ${PORT}`);

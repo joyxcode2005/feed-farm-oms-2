@@ -2,7 +2,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 'use client';
 
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo } from 'react';
 import { Search, MapPin, Users, Building2, Phone, X, LayoutGrid } from 'lucide-react';
 import * as d3 from 'd3-geo';
 import * as topojson from 'topojson-client';
