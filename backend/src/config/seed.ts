@@ -61,11 +61,11 @@ async function main() {
   log.info("Initializing admin seeding script...");
 
   const adminData: SeedAdminInput = {
-    name: "James Hunt",
-    email: "jamehunt@gmail.com",
-    password: "james@123",
-    phone: "9836763798",
-    role: "ADMIN",
+    name: "Ayush Kirtania",
+    email: "ayushkirtania@gmail.com",
+    password: "ayush@123",
+    phone: "9836763794",
+    role: "SUPER_ADMIN",
   };
 
   try {

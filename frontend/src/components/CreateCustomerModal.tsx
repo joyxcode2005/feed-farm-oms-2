@@ -17,7 +17,7 @@ export default function CreateCustomerModal({ onClose, onCreated }: Props) {
     name: "",
     phone: "",
     type: "SINGLE",
-    state: "",
+    district: "",
     address: "",
   });
 
@@ -92,13 +92,13 @@ export default function CreateCustomerModal({ onClose, onCreated }: Props) {
             </div>
             <div>
               <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1">
-                State/District
+                District
               </label>
               <input
                 className="w-full px-3 py-2 rounded-lg border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800"
-                value={formData.state}
-                onChange={(e) => setFormData({ ...formData, state: e.target.value })}
-                placeholder="e.g. West Bengal"
+                value={formData.district}
+                onChange={(e) => setFormData({ ...formData, district: e.target.value })}
+                placeholder="e.g. North 24 Parganas"
               />
             </div>
           </div>

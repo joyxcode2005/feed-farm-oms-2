@@ -5,7 +5,7 @@ import {
   getCustomerByIdDB,
   getCustomerLedgerDB,
   getCustomerOrdersDB,
-  getCustomersByState,
+  getCustomersByDistrict,
   getCustomerSnapshotsDB,
   updateCustomerDB,
 } from "../controllers/customer.controller";
@@ -56,18 +56,18 @@ router.post("/", async (req: Request, res: Response) => {
   }
 });
 
-// Get customers by state/district
+// Get customers by district/district
 router.get("/", async (req: Request, res: Response) => {
   try {
-    const { state, type } = req.query;
+    const { district, type } = req.query;
 
-    // If state is provided, filter by state
-    if (state && typeof state === "string") {
-      const customers = await getCustomersByState(state, type as string);
+    // If district is provided, filter by district
+    if (district && typeof district === "string") {
+      const customers = await getCustomersByDistrict(district, type as string);
 
       return res.status(200).json({
         success: true,
-        message: `Customers fetched for ${state}`,
+        message: `Customers fetched for ${district}`,
         customers,
       });
     }
@@ -94,11 +94,11 @@ router.get("/", async (req: Request, res: Response) => {
  */
 router.get("/", async (req: Request, res: Response) => {
   try {
-    const { type, state } = req.query;
+    const { type, district } = req.query;
 
     const customers = await getAllCustomersDB({
       type: type as any,
-      state: state as string | undefined,
+      district: district as string | undefined,
     });
 
     return res.status(200).json({

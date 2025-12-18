@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-unused-vars */
 /* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
@@ -14,8 +13,14 @@ interface ProductionModalProps {
 
 export default function ProductionModal({ onClose, onSuccess }: ProductionModalProps) {
   const [loading, setLoading] = useState(false);
+  
+  // Data State
   const [feedCategories, setFeedCategories] = useState<any[]>([]);
   const [rawMaterials, setRawMaterials] = useState<any[]>([]);
+  const [animalTypes, setAnimalTypes] = useState<any[]>([]);
+  
+  // Selection State
+  const [selectedAnimalType, setSelectedAnimalType] = useState<string>("");
 
   const [formData, setFormData] = useState({
     feedCategoryId: "",
@@ -24,26 +29,67 @@ export default function ProductionModal({ onClose, onSuccess }: ProductionModalP
     notes: "",
   });
 
-  const [materialsUsed, setMaterialsUsed] = useState<{ rawMaterialId: string; quantityKg: string }[]>([
-    { rawMaterialId: "", quantityKg: "" }
+  const [materialsUsed, setMaterialsUsed] = useState<{ rawMaterialId: string; quantity: string }[]>([
+    { rawMaterialId: "", quantity: "" }
   ]);
 
   // Fetch initial data
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const [catsRes, matsRes] = await Promise.all([
-          api.get("/finished-feed/stock"), // Reusing stock endpoint to get categories
-          api.get("/raw-materials")
+        const [catsRes, matsRes, animalsRes] = await Promise.all([
+          api.get("/finished-feed/stock"),
+          api.get("/raw-materials"),
+          api.get("/animal-types")
         ]);
-        setFeedCategories(catsRes.data.data);
-        setRawMaterials(matsRes.data.data);
+        
+        console.log("Feeds Data:", catsRes.data.data); // Debug: Check console to see feed structure
+        console.log("Animals Data:", animalsRes.data.data); // Debug: Check console to see animals
+        
+        setFeedCategories(catsRes.data.data || []);
+        setRawMaterials(matsRes.data.data || []);
+        setAnimalTypes(animalsRes.data.data || []);
       } catch (error) {
+        console.error(error);
         toast.error("Failed to load form data");
       }
     };
     fetchData();
   }, []);
+
+  // Helper to safely get animal name from a feed category object
+  const getFeedAnimalName = (cat: any) => {
+    // Check if animalType is an object (from your Controller)
+    if (cat.animalType && typeof cat.animalType === 'object' && cat.animalType.name) {
+      return cat.animalType.name;
+    }
+    // Check if animalType is just a string (from your old code)
+    if (typeof cat.animalType === 'string') {
+      return cat.animalType;
+    }
+    return "";
+  };
+
+  // Filter Logic
+  const filteredFeedCategories = feedCategories.filter((cat) => {
+    // If no animal type is selected, show all
+    if (!selectedAnimalType) return true;
+    
+    // 1. Find the name of the selected animal type from the ID
+    const currentAnimalTypeObj = animalTypes.find(t => t.id === selectedAnimalType);
+    if (!currentAnimalTypeObj) return true; // Should not happen
+
+    // 2. Get the animal name from the feed category safely
+    const feedAnimalName = getFeedAnimalName(cat);
+
+    // 3. Compare them
+    return feedAnimalName === currentAnimalTypeObj.name;
+  });
+
+  // Reset selected feed when animal type changes
+  useEffect(() => {
+    setFormData(prev => ({ ...prev, feedCategoryId: "" }));
+  }, [selectedAnimalType]);
 
   const handleMaterialChange = (index: number, field: string, value: string) => {
     const newMaterials = [...materialsUsed];
@@ -52,7 +98,7 @@ export default function ProductionModal({ onClose, onSuccess }: ProductionModalP
   };
 
   const addMaterialRow = () => {
-    setMaterialsUsed([...materialsUsed, { rawMaterialId: "", quantityKg: "" }]);
+    setMaterialsUsed([...materialsUsed, { rawMaterialId: "", quantity: "" }]);
   };
 
   const removeMaterialRow = (index: number) => {
@@ -67,12 +113,11 @@ export default function ProductionModal({ onClose, onSuccess }: ProductionModalP
 
     setLoading(true);
     try {
-      // Filter out empty rows and convert types
       const cleanMaterials = materialsUsed
-        .filter(m => m.rawMaterialId && m.quantityKg)
+        .filter(m => m.rawMaterialId && m.quantity)
         .map(m => ({
           rawMaterialId: m.rawMaterialId,
-          quantityKg: Number(m.quantityKg)
+          quantity: Number(m.quantity)
         }));
 
       await api.post("/finished-feed/production", {
@@ -104,8 +149,29 @@ export default function ProductionModal({ onClose, onSuccess }: ProductionModalP
         </div>
 
         <form onSubmit={handleSubmit} className="p-6 space-y-6">
-          {/* Main Info */}
+          
+          {/* 1. Animal Type Dropdown */}
+          <div>
+            <label htmlFor="animalType" className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1">
+              Filter by Animal Type
+            </label>
+            <select
+              id="animalType"
+              className="w-full px-3 py-2 rounded-lg border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800"
+              value={selectedAnimalType}
+              onChange={(e) => setSelectedAnimalType(e.target.value)}
+            >
+              <option value="">Show All Animals</option>
+              {animalTypes.map((type) => (
+                <option key={type.id} value={type.id}>
+                  {type.name}
+                </option>
+              ))}
+            </select>
+          </div>
+
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* 2. Feed Category Dropdown (Filtered) */}
             <div>
               <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1">
                 Feed Category
@@ -117,9 +183,11 @@ export default function ProductionModal({ onClose, onSuccess }: ProductionModalP
                 onChange={(e) => setFormData({ ...formData, feedCategoryId: e.target.value })}
               >
                 <option value="">Select Feed...</option>
-                {feedCategories.map((c: any) => (
-                  <option key={c.feedCategroyId} value={c.feedCategroyId}>
-                    {c.feedName} ({c.animalType})
+                {filteredFeedCategories.map((c: any) => (
+                  // Uses c.id (new backend) or c.feedCategroyId (old frontend fallback)
+                  <option key={c.id || c.feedCategroyId} value={c.id || c.feedCategroyId}>
+                    {/* Uses c.name (new) or c.feedName (old) */}
+                    {c.name || c.feedName} ({getFeedAnimalName(c)})
                   </option>
                 ))}
               </select>
@@ -190,8 +258,8 @@ export default function ProductionModal({ onClose, onSuccess }: ProductionModalP
                     required
                     placeholder="Qty"
                     className="w-24 px-3 py-2 text-sm rounded-md border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800"
-                    value={row.quantityKg}
-                    onChange={(e) => handleMaterialChange(index, "quantityKg", e.target.value)}
+                    value={row.quantity}
+                    onChange={(e) => handleMaterialChange(index, "quantity", e.target.value)}
                   />
                   
                   <button

@@ -83,9 +83,7 @@ export const createCustomerSchema = z.object({
   phone: z.string().min(8, "Phone is required"),
   address: z.string().optional(),
   type: z.enum(["SINGLE", "DISTRIBUTER"]).optional(),
-  state: z.string().optional(),
-  latitude: z.number().optional(),
-  longitude: z.number().optional(),
+  district: z.string(),
   createdByAdminId: z.string().uuid().optional(),
 });
 
@@ -94,7 +92,5 @@ export const updateCustomerSchema = z.object({
   phone: z.string().min(8).optional(),
   address: z.string().optional(),
   type: z.enum(["SINGLE", "DISTRIBUTER"]).optional(),
-  state: z.string().optional(),
-  latitude: z.number().optional(),
-  longitude: z.number().optional(),
+  district: z.string(),
 });
