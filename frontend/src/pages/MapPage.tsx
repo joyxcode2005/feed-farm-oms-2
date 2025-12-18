@@ -45,7 +45,7 @@ interface Customer {
   phone: string;
   address?: string;
   type: 'SINGLE' | 'DISTRIBUTER';
-  state?: string;
+  district: string;
 }
 
 export default function MapPage() {
@@ -78,7 +78,7 @@ export default function MapPage() {
   const fetchCustomersByDistrict = async (district: string) => {
     setLoading(true);
     try {
-      const response = await fetch(`${API_BASE}/customers?state=${district}`, {
+      const response = await fetch(`${API_BASE}/customers?district=${district}`, {
         credentials: 'include',
       });
       if (response.ok) {

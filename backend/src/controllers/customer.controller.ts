@@ -5,19 +5,17 @@ interface CreateCustomerInput {
   phone: string;
   address?: string;
   type?: "SINGLE" | "DISTRIBUTER";
-  state?: string;
-  latitude?: number;
-  longitude?: number;
+  district: string;
   createdByAdminId?: string;
 }
 
 interface GetAllCustomersInput {
   type?: "SINGLE" | "DISTRIBUTER";
-  state?: string;
+  district?: string;
 }
 
 export async function createCustomerDB(input: CreateCustomerInput) {
-  const { name, phone, address, type, state, latitude, longitude, createdByAdminId } = input;
+  const { name, phone, address, type, district, createdByAdminId } = input;
 
   return prisma.customer.create({
     data: {
@@ -25,18 +23,16 @@ export async function createCustomerDB(input: CreateCustomerInput) {
       phone,
       address,
       type,
-      state,
-      latitude,
-      longitude,
+      district,
       createdByAdminId,
     },
   });
 }
 
-export async function getCustomersByState(state: string, type?: string) {
+export async function getCustomersByDistrict(district: string, type?: string) {
   const whereClause: any = {
-    state: {
-      equals: state,
+    district: {
+      equals: district,
       mode: "insensitive", // Case-insensitive search
     },
   };
@@ -54,9 +50,7 @@ export async function getCustomersByState(state: string, type?: string) {
       phone: true,
       address: true,
       type: true,
-      state: true,
-      latitude: true,
-      longitude: true,
+      district: true,
       createdAt: true,
     },
     orderBy: {
@@ -66,12 +60,12 @@ export async function getCustomersByState(state: string, type?: string) {
 }
 
 export async function getAllCustomersDB(input: GetAllCustomersInput) {
-  const { type, state } = input;
+  const { type, district } = input;
 
   const where: any = {};
 
   if (type) where.type = type;
-  if (state) where.state = state;
+  if (district) where.district = district;
 
   return prisma.customer.findMany({
     where,
@@ -83,7 +77,7 @@ export async function getAllCustomersDB(input: GetAllCustomersInput) {
       name: true,
       phone: true,
       type: true,
-      state: true,
+      district: true,
       createdAt: true,
     },
   });
@@ -104,9 +98,7 @@ export async function getCustomerByIdDB(input: GetCustomerByIdInput) {
       phone: true,
       address: true,
       type: true,
-      state: true,
-      latitude: true,
-      longitude: true,
+      district: true,
       createdAt: true,
       updatedAt: true,
     },
@@ -119,9 +111,7 @@ interface UpdateCustomerInput {
   phone?: string;
   address?: string;
   type?: "SINGLE" | "DISTRIBUTER";
-  state?: string;
-  latitude?: number;
-  longitude?: number;
+  district: string;
 }
 
 export async function updateCustomerDB(input: UpdateCustomerInput) {
