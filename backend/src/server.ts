@@ -9,8 +9,9 @@ import rawMaterialRouter from "./routes/rawMaterial.routes";
 import finishedFeedRouter from "./routes/finishedFeed.routes";
 import { adminUserMiddleware } from "./middlewares/auth.middleware";
 import animaltypesRouter from "./routes/animalType.routes";
-import feedcategoryRouter from "./routes/feedCategory.routes"
-
+import feedcategoryRouter from "./routes/feedCategory.routes";
+import orderRouter from "./routes/order.routes";
+import paymentsRouter from "./routes/payments.routes"
 dotenv.config();
 
 const PORT = process.env.PORT || 8000;
@@ -44,6 +45,8 @@ app.use("/api/v1/admin/finished-feed", finishedFeedRouter);
 app.use("/api/v1/admin/customers", customersRouter);
 app.use("/api/v1/admin/animal-types", animaltypesRouter);
 app.use("/api/v1/admin/feed-categories", feedcategoryRouter);
+app.use("/api/v1/admin/orders", orderRouter);
+app.use("/api/v1/amin/payments", paymentsRouter)
 
 app.listen(PORT, () => {
   console.log(`Server is listening on port ${PORT}`);

@@ -1,4 +1,4 @@
-import { MaterialUnit } from "@prisma/client";
+import { MaterialUnit, OrderStatus, PaymentMethod } from "@prisma/client";
 import z from "zod";
 
 // Admin login schema
@@ -97,4 +97,43 @@ export const updateCustomerSchema = z.object({
   state: z.string().optional(),
   latitude: z.number().optional(),
   longitude: z.number().optional(),
+});
+
+export const createOrderSchema = z.object({
+  customerId: z.string().uuid(),
+  items: z
+    .array(
+      z.object({
+        feedCategoryId: z.string().uuid(),
+        quantityBags: z.number().positive(),
+        pricePerBag: z.number().positive(),
+      }),
+    )
+    .min(1),
+  discountType: z.enum(["FLAT", "PERCENTAGE"]).optional(),
+  discountValue: z.number().positive().optional(),
+  deliveryDate: z.string(),
+});
+
+export const statusSchema = z.object({
+  status: z.nativeEnum(OrderStatus),
+});
+
+export const validTransitions: Record<OrderStatus, OrderStatus[]> = {
+  PENDING: ["CONFIRMED", "CANCELED"],
+  CONFIRMED: ["DISPATCHED", "CANCELED"],
+  DISPATCHED: ["DELIVERED"],
+  DELIVERED: [],
+  CANCELED: [],
+};
+
+export const deliveryDateSchema = z.object({
+  deliveryDate: z.string().min(1),
+});
+
+export const createPaymentSchema = z.object({
+  orderId: z.string().uuid(),
+  amountPaid: z.number().positive(),
+  paymentMethod: z.nativeEnum(PaymentMethod),
+  note: z.string().optional(),
 });
