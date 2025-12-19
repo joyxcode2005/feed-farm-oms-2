@@ -13,6 +13,8 @@ import RawMaterials from "@/src/pages/RawMaterials";
 import FinishedFeedStock from "@/src/pages/FinishedFeedStock";
 import Customers from "@/src/pages/Customers";
 import Dashboard from "@/src/pages/Dashboard"; // <--- Import
+import Orders from "@/src/pages/Orders";
+import Payments from "@/src/pages/Payments";
 
 export default function AdminPage() {
   const { admin, loading, logout } = useAdminAuth();
@@ -40,10 +42,13 @@ export default function AdminPage() {
         return <FinishedFeedStock />;
 
       case "Orders":
-        return <div>Orders</div>;
+        return <Orders />;
 
       case "Customers":
         return <Customers />;
+
+      case "Payments":
+        return <Payments />;
 
       case "Admins":
         return <Admins currentAdmin={admin} />;

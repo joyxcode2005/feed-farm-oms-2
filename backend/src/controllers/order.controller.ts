@@ -232,16 +232,18 @@ interface UpdateOrderStatusInput {
   status: OrderStatus;
 }
 
-export async function updateOrderStatusDB(input: UpdateOrderStatusInput) {
+export async function updateOrderStatusDB(
+  input: UpdateOrderStatusInput
+) {
   const { orderId, status } = input;
 
   return prisma.$transaction(async (tx) => {
-    // 1. Fetch order with items
+    // 1. Fetch order + items
     const order = await tx.order.findUnique({
       where: { id: orderId },
       include: {
-        items: true,
-      },
+        items: true
+      }
     });
 
     if (!order) {
@@ -250,47 +252,63 @@ export async function updateOrderStatusDB(input: UpdateOrderStatusInput) {
 
     const currentStatus = order.orderStatus;
 
-    // 2. Enforce state machine (DB safety)
+    // 2. Block invalid final states
     if (currentStatus === "DELIVERED" || currentStatus === "CANCELED") {
       throw new Error("FINAL_STATE");
     }
 
+    // 3. Prevent reverting to PENDING
     if (status === "PENDING") {
       throw new Error("CANNOT_REVERT_TO_PENDING");
     }
 
-    // 3. Handle cancellation stock rollback
-    if (status === "CANCELED" && currentStatus !== "DISPATCHED") {
-      // Restore stock
+    // 4. Handle DISPATCH → deduct stock
+    if (status === "DISPATCHED") {
+      if (currentStatus !== "CONFIRMED") {
+        throw new Error("INVALID_DISPATCH_STATE");
+      }
+
+      // Check stock availability first
+      for (const item of order.items) {
+        const stock = await tx.finishedFeedStock.findUnique({
+          where: { feedCategoryId: item.feedCategoryId }
+        });
+
+        if (!stock || stock.quantityAvailable < item.quantityBags) {
+          throw new Error("INSUFFICIENT_STOCK");
+        }
+      }
+
+      // Deduct stock + ledger
       for (const item of order.items) {
         await tx.finishedFeedStock.update({
           where: { feedCategoryId: item.feedCategoryId },
           data: {
             quantityAvailable: {
-              increment: item.quantityBags,
-            },
-          },
+              decrement: item.quantityBags
+            }
+          }
         });
 
         await tx.finishedFeedStockTransaction.create({
           data: {
             feedCategoryId: item.feedCategoryId,
             adminUserId: order.adminUserId,
-            type: "ADJUSTMENT",
+            type: "SALE_OUT",
             quantityBags: item.quantityBags,
-            notes: "Order cancelled – stock restored",
             orderId: order.id,
-          },
+            notes: "Stock deducted on dispatch"
+          }
         });
       }
     }
 
-    // 4. Update order status
+    // 5. Update order status
     return tx.order.update({
       where: { id: orderId },
       data: {
-        orderStatus: status,
-      },
+        orderStatus: status
+      }
     });
   });
 }

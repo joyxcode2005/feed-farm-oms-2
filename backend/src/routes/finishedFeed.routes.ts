@@ -137,7 +137,7 @@ router.post("/sale", async (req: Request, res: Response) => {
 router.post("/adjust", async (req: Request, res: Response) => {
   try {
     const parsed = finishedFeedAdjustSchema.safeParse(req.body);
-
+    const adminUserId = (req as any).adminId
     if (!parsed.success) {
       return res.status(400).json({
         success: false,
@@ -146,7 +146,7 @@ router.post("/adjust", async (req: Request, res: Response) => {
       });
     }
 
-    const { feedCategoryId, quantityBags, adminUserId, reason } = parsed.data;
+    const { feedCategoryId, quantityBags, reason } = parsed.data;
 
     const result = await adjustFinishedFeedStockDB({
       feedCategoryId,
