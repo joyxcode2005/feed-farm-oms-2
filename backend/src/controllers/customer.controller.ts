@@ -14,6 +14,21 @@ interface GetAllCustomersInput {
   district?: string;
 }
 
+export async function checkExistingCustomer(phone:string) {
+  return prisma.customer.findFirst({
+    where: {
+      phone
+    },
+    select: {
+      id: true,
+      name: true,
+      address: true,
+      phone: true,
+      district: true,
+    }
+  })
+}
+
 export async function createCustomerDB(input: CreateCustomerInput) {
   const { name, phone, address, type, district, createdByAdminId } = input;
 
