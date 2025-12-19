@@ -29,6 +29,7 @@ router.post("/", async (req: Request, res: Response) => {
     }
 
     try {
+      const existingCustomer = await existing
       const customer = await createCustomerDB(parsed.data);
 
       return res.status(201).json({
