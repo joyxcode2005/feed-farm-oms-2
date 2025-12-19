@@ -227,16 +227,71 @@ export async function getOrderByIdDB(input: GetOrderByIdInput) {
   });
 }
 
-export async function updateOrderStatusDB(
-  input: UpdateOrderStatusInput
-) {
+interface UpdateOrderStatusInput {
+  orderId: string;
+  status: OrderStatus;
+}
+
+export async function updateOrderStatusDB(input: UpdateOrderStatusInput) {
   const { orderId, status } = input;
 
-  return prisma.order.update({
-    where: { id: orderId },
-    data: {
-      orderStatus: status
+  return prisma.$transaction(async (tx) => {
+    // 1. Fetch order with items
+    const order = await tx.order.findUnique({
+      where: { id: orderId },
+      include: {
+        items: true,
+      },
+    });
+
+    if (!order) {
+      throw new Error("ORDER_NOT_FOUND");
     }
+
+    const currentStatus = order.orderStatus;
+
+    // 2. Enforce state machine (DB safety)
+    if (currentStatus === "DELIVERED" || currentStatus === "CANCELED") {
+      throw new Error("FINAL_STATE");
+    }
+
+    if (status === "PENDING") {
+      throw new Error("CANNOT_REVERT_TO_PENDING");
+    }
+
+    // 3. Handle cancellation stock rollback
+    if (status === "CANCELED" && currentStatus !== "DISPATCHED") {
+      // Restore stock
+      for (const item of order.items) {
+        await tx.finishedFeedStock.update({
+          where: { feedCategoryId: item.feedCategoryId },
+          data: {
+            quantityAvailable: {
+              increment: item.quantityBags,
+            },
+          },
+        });
+
+        await tx.finishedFeedStockTransaction.create({
+          data: {
+            feedCategoryId: item.feedCategoryId,
+            adminUserId: order.adminUserId,
+            type: "ADJUSTMENT",
+            quantityBags: item.quantityBags,
+            notes: "Order cancelled – stock restored",
+            orderId: order.id,
+          },
+        });
+      }
+    }
+
+    // 4. Update order status
+    return tx.order.update({
+      where: { id: orderId },
+      data: {
+        orderStatus: status,
+      },
+    });
   });
 }
 
@@ -245,14 +300,11 @@ interface UpdateOrderDeliveryDateInput {
   deliveryDate: Date;
 }
 
-export async function updateOrderDeliveryDateDB(
-  input: UpdateOrderDeliveryDateInput
-) {
+export async function updateOrderDeliveryDateDB(input: UpdateOrderDeliveryDateInput) {
   const { orderId, deliveryDate } = input;
 
   return prisma.order.update({
     where: { id: orderId },
-    data: { deliveryDate }
+    data: { deliveryDate },
   });
 }
-
