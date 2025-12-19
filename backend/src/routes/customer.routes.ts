@@ -1,5 +1,6 @@
 import { Request, Response, Router } from "express";
 import {
+  checkExistingCustomer,
   createCustomerDB,
   getAllCustomersDB,
   getCustomerByIdDB,
@@ -29,7 +30,6 @@ router.post("/", async (req: Request, res: Response) => {
     }
 
     try {
-      const existingCustomer = await existing
       const customer = await createCustomerDB(parsed.data);
 
       return res.status(201).json({
@@ -50,6 +50,33 @@ router.post("/", async (req: Request, res: Response) => {
   } catch (error) {
     console.error("Customer creation failed:", error);
 
+    return res.status(500).json({
+      success: false,
+      message: "Internal Server Error!!",
+    });
+  }
+});
+
+// Get existing customer based on phone number
+router.get("/phone", async (req: Request, res: Response) => {
+  try {
+    // Get the phone number from the request body
+    const phone = req.body;
+
+    const existingCustomer = await checkExistingCustomer(phone);
+
+    if (!existingCustomer)
+      return res.status(404).json({
+        success: false,
+        message: "Customer with the phone number not found!! Create a new customer entry!!",
+      });
+
+    return res.status(201).json({
+      success: true,
+      message: "Customer data found!!",
+      existingCustomer,
+    });
+  } catch (error) {
     return res.status(500).json({
       success: false,
       message: "Internal Server Error!!",
