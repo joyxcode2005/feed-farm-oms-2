@@ -137,7 +137,6 @@ router.post("/sale", async (req: Request, res: Response) => {
 router.post("/adjust", async (req: Request, res: Response) => {
   try {
     const parsed = finishedFeedAdjustSchema.safeParse(req.body);
-
     if (!parsed.success) {
       return res.status(400).json({
         success: false,
