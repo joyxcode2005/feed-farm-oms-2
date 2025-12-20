@@ -74,7 +74,6 @@ export const finishedFeedAdjustSchema = z.object({
   quantityBags: z.number().refine((v) => v !== 0, {
     message: "Adjustment quantity cannot be zero",
   }),
-  adminUserId: z.string().uuid(),
   reason: z.string().min(1, "Reason is required"),
 });
 

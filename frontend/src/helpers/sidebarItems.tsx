@@ -10,7 +10,8 @@ import {
   Settings,
   ShoppingCart,
   Users,
-  UserCircle, // <--- Import this
+  UserCircle,
+  Currency, // <--- Import this
 } from "lucide-react";
 
 export const sidebarItems: {
@@ -42,6 +43,11 @@ export const sidebarItems: {
     key: "Customers", 
     label: "Customers",
     icon: <UserCircle size={16} />,
+  },
+  {
+    key: "Payments", 
+    label: "Payments",
+    icon: <Currency size={16} />,
   },
   {
     key: "Admins",

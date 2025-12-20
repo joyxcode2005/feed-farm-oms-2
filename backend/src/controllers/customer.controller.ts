@@ -14,10 +14,10 @@ interface GetAllCustomersInput {
   district?: string;
 }
 
-export async function checkExistingCustomer(phone:string) {
+export async function checkExistingCustomer(phone: string) {
   return prisma.customer.findFirst({
     where: {
-      phone
+      phone,
     },
     select: {
       id: true,
@@ -25,8 +25,8 @@ export async function checkExistingCustomer(phone:string) {
       address: true,
       phone: true,
       district: true,
-    }
-  })
+    },
+  });
 }
 
 export async function createCustomerDB(input: CreateCustomerInput) {
@@ -116,6 +116,21 @@ export async function getCustomerByIdDB(input: GetCustomerByIdInput) {
       district: true,
       createdAt: true,
       updatedAt: true,
+    },
+  });
+}
+
+export async function getCustomerOrdersByIdDB(input: GetCustomerByIdInput) {
+  const { customerId } = input;
+
+  return prisma.customer.findUnique({
+    where: { id: customerId },
+    select: {
+      id: true,
+      district: true,
+      createdAt: true,
+      updatedAt: true,
+      orders: true,
     },
   });
 }

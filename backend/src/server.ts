@@ -47,7 +47,7 @@ app.use("/api/v1/admin/customers", customersRouter);
 app.use("/api/v1/admin/animal-types", animaltypesRouter);
 app.use("/api/v1/admin/feed-categories", feedcategoryRouter);
 app.use("/api/v1/admin/orders", orderRouter);
-app.use("/api/v1/amin/payments", paymentsRouter)
+app.use("/api/v1/admin/payments", paymentsRouter)
 
 app.listen(PORT, () => {
   console.log(`Server is listening on port ${PORT}`);

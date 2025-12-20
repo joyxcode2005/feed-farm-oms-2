@@ -5,12 +5,14 @@ import {
   getAllCustomersDB,
   getCustomerByIdDB,
   getCustomerLedgerDB,
+  getCustomerOrdersByIdDB,
   getCustomerOrdersDB,
   getCustomersByDistrict,
   getCustomerSnapshotsDB,
   updateCustomerDB,
 } from "../controllers/customer.controller";
 import { createCustomerSchema, updateCustomerSchema } from "../config/types";
+import { float64 } from "zod";
 
 const router = Router();
 
@@ -38,7 +40,6 @@ router.post("/", async (req: Request, res: Response) => {
         data: customer,
       });
     } catch (err: any) {
-      // Unique phone constraint
       if (err.code === "P2002") {
         return res.status(409).json({
           success: false,
@@ -49,67 +50,6 @@ router.post("/", async (req: Request, res: Response) => {
     }
   } catch (error) {
     console.error("Customer creation failed:", error);
-
-    return res.status(500).json({
-      success: false,
-      message: "Internal Server Error!!",
-    });
-  }
-});
-
-// Get existing customer based on phone number
-router.get("/phone", async (req: Request, res: Response) => {
-  try {
-    // Get the phone number from the request body
-    const phone = req.body;
-
-    const existingCustomer = await checkExistingCustomer(phone);
-
-    if (!existingCustomer)
-      return res.status(404).json({
-        success: false,
-        message: "Customer with the phone number not found!! Create a new customer entry!!",
-      });
-
-    return res.status(201).json({
-      success: true,
-      message: "Customer data found!!",
-      existingCustomer,
-    });
-  } catch (error) {
-    return res.status(500).json({
-      success: false,
-      message: "Internal Server Error!!",
-    });
-  }
-});
-
-// Get customers by district/district
-router.get("/", async (req: Request, res: Response) => {
-  try {
-    const { district, type } = req.query;
-
-    // If district is provided, filter by district
-    if (district && typeof district === "string") {
-      const customers = await getCustomersByDistrict(district, type as string);
-
-      return res.status(200).json({
-        success: true,
-        message: `Customers fetched for ${district}`,
-        customers,
-      });
-    }
-
-    // Otherwise get all customers
-    const customers = await getAllCustomersDB({});
-
-    return res.status(200).json({
-      success: true,
-      message: "All customers fetched",
-      customers,
-    });
-  } catch (error) {
-    console.error("Error fetching customers:", error);
     return res.status(500).json({
       success: false,
       message: "Internal Server Error!!",
@@ -118,11 +58,59 @@ router.get("/", async (req: Request, res: Response) => {
 });
 
 /**
- * Route to get all customers
+ * Route to check/get existing customer based on phone number
+ * usage: GET /api/v1/admin/customers/phone?phone=9876543210
  */
+router.get("/phone", async (req: Request, res: Response) => {
+  try {
+    // Get the phone number from the query parameters
+    const { phone } = req.query;
+
+    if (!phone || typeof phone !== "string") {
+      return res.status(400).json({
+        success: false,
+        message: "Phone number is required",
+      });
+    }
+
+    const existingCustomer = await checkExistingCustomer(phone);
+
+    if (!existingCustomer) {
+      return res.status(404).json({
+        success: false,
+        message: "Customer not found",
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: "Customer found",
+      data: existingCustomer, // Returning inside 'data' for consistency
+    });
+  } catch (error) {
+    console.error("Check customer failed:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Internal Server Error!!",
+    });
+  }
+});
+
+// ... (Rest of the file remains the same: get all, get by id, update, etc.)
+
 router.get("/", async (req: Request, res: Response) => {
   try {
-    const { type, district } = req.query;
+    const { district, type } = req.query;
+
+    // Filter by district/type logic...
+    if (district && typeof district === "string") {
+      const customers = await getCustomersByDistrict(district, type as string);
+      return res.status(200).json({
+        success: true,
+        message: `Customers fetched for ${district}`,
+        customers, // or data: customers
+      });
+    }
 
     const customers = await getAllCustomersDB({
       type: type as any,
@@ -135,8 +123,7 @@ router.get("/", async (req: Request, res: Response) => {
       data: customers,
     });
   } catch (error) {
-    console.error("Fetching customers failed:", error);
-
+    console.error("Error fetching customers:", error);
     return res.status(500).json({
       success: false,
       message: "Internal Server Error!!",
@@ -150,7 +137,6 @@ router.get("/", async (req: Request, res: Response) => {
 router.get("/:id", async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
-
     const customer = await getCustomerByIdDB({ customerId: id });
 
     if (!customer) {
@@ -167,7 +153,47 @@ router.get("/:id", async (req: Request, res: Response) => {
     });
   } catch (error) {
     console.error("Fetching customer failed:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Internal Server Error!!",
+    });
+  }
+});
 
+router.get("/:id/total-due", async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const customer = await getCustomerOrdersByIdDB({ customerId: id });
+
+    if (!customer) {
+      return res.status(404).json({
+        success: false,
+        message: "Customer not found",
+      });
+    }
+
+    // Variable to store total due
+    let totalDue = 0.0;
+
+    for (const order of customer.orders) {
+      totalDue += order.dueAmount;
+    }
+
+    if (!totalDue)
+      return res.status(201).json({
+        success: true,
+        message: "Customer has no due amount to pay!!!",
+        totalDue: 0.0,
+      });
+
+    return res.status(200).json({
+      success: true,
+      message: "Customer due amount fetched successfully!!!",
+      customerTotalDue: totalDue,
+    });
+    
+  } catch (error) {
+    console.error("Fetching customer failed:", error);
     return res.status(500).json({
       success: false,
       message: "Internal Server Error!!",
@@ -181,7 +207,6 @@ router.get("/:id", async (req: Request, res: Response) => {
 router.put("/:id", async (req: Request, res: Response) => {
   try {
     const parsed = updateCustomerSchema.safeParse(req.body);
-
     if (!parsed.success) {
       return res.status(400).json({
         success: false,
@@ -195,32 +220,22 @@ router.put("/:id", async (req: Request, res: Response) => {
         customerId: req.params.id,
         ...parsed.data,
       });
-
       return res.status(200).json({
         success: true,
         message: "Customer updated successfully",
         data: customer,
       });
     } catch (err: any) {
-      if (err.code === "P2002") {
-        return res.status(409).json({
-          success: false,
-          message: "Customer with this phone already exists",
-        });
-      }
-
-      if (err.code === "P2025") {
-        return res.status(404).json({
-          success: false,
-          message: "Customer not found",
-        });
-      }
-
+      if (err.code === "P2002")
+        return res
+          .status(409)
+          .json({ success: false, message: "Customer with this phone already exists" });
+      if (err.code === "P2025")
+        return res.status(404).json({ success: false, message: "Customer not found" });
       throw err;
     }
   } catch (error) {
     console.error("Customer update failed:", error);
-
     return res.status(500).json({
       success: false,
       message: "Internal Server Error!!",
@@ -233,22 +248,13 @@ router.put("/:id", async (req: Request, res: Response) => {
  */
 router.get("/:id/orders", async (req: Request, res: Response) => {
   try {
-    const { id } = req.params;
-
-    const orders = await getCustomerOrdersDB({ customerId: id });
-
-    return res.status(200).json({
-      success: true,
-      message: "Customer orders fetched successfully",
-      data: orders,
-    });
+    const orders = await getCustomerOrdersDB({ customerId: req.params.id });
+    return res
+      .status(200)
+      .json({ success: true, message: "Customer orders fetched successfully", data: orders });
   } catch (error) {
     console.error("Fetching customer orders failed:", error);
-
-    return res.status(500).json({
-      success: false,
-      message: "Internal Server Error!!",
-    });
+    return res.status(500).json({ success: false, message: "Internal Server Error!!" });
   }
 });
 
@@ -257,22 +263,13 @@ router.get("/:id/orders", async (req: Request, res: Response) => {
  */
 router.get("/:id/ledger", async (req: Request, res: Response) => {
   try {
-    const { id } = req.params;
-
-    const ledger = await getCustomerLedgerDB({ customerId: id });
-
-    return res.status(200).json({
-      success: true,
-      message: "Customer ledger fetched successfully",
-      data: ledger,
-    });
+    const ledger = await getCustomerLedgerDB({ customerId: req.params.id });
+    return res
+      .status(200)
+      .json({ success: true, message: "Customer ledger fetched successfully", data: ledger });
   } catch (error) {
     console.error("Fetching customer ledger failed:", error);
-
-    return res.status(500).json({
-      success: false,
-      message: "Internal Server Error!!",
-    });
+    return res.status(500).json({ success: false, message: "Internal Server Error!!" });
   }
 });
 
@@ -281,27 +278,18 @@ router.get("/:id/ledger", async (req: Request, res: Response) => {
  */
 router.get("/:id/snapshots", async (req: Request, res: Response) => {
   try {
-    const { id } = req.params;
     const { from, to } = req.query;
-
     const snapshots = await getCustomerSnapshotsDB({
-      customerId: id,
+      customerId: req.params.id,
       from: from ? new Date(from as string) : undefined,
       to: to ? new Date(to as string) : undefined,
     });
-
-    return res.status(200).json({
-      success: true,
-      message: "Customer snapshots fetched successfully",
-      data: snapshots,
-    });
+    return res
+      .status(200)
+      .json({ success: true, message: "Customer snapshots fetched successfully", data: snapshots });
   } catch (error) {
     console.error("Fetching customer snapshots failed:", error);
-
-    return res.status(500).json({
-      success: false,
-      message: "Internal Server Error!!",
-    });
+    return res.status(500).json({ success: false, message: "Internal Server Error!!" });
   }
 });
 
