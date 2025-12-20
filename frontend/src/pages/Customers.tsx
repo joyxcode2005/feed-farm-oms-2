@@ -2,6 +2,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { api } from "@/src/config";
 import toast from "react-hot-toast";
 import { Plus, Search, MapPin, Users, User } from "lucide-react";
@@ -17,6 +18,7 @@ interface Customer {
 }
 
 export default function Customers() {
+  const router = useRouter();
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isCreating, setIsCreating] = useState(false);
@@ -83,14 +85,20 @@ export default function Customers() {
           ))
         ) : filteredCustomers.length > 0 ? (
           filteredCustomers.map((customer) => (
-            <div key={customer.id} className="p-4 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl shadow-sm hover:shadow-md transition-shadow">
+            <div 
+              key={customer.id} 
+              onClick={() => router.push(`/dashboard/customers/${customer.id}`)}
+              className="p-4 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl shadow-sm hover:shadow-md transition-all cursor-pointer group active:scale-[0.98]"
+            >
               <div className="flex justify-between items-start mb-2">
                 <div className="flex items-center gap-2">
                   <div className={`p-2 rounded-full ${customer.type === "DISTRIBUTER" ? "bg-purple-100 text-purple-600" : "bg-blue-100 text-blue-600"}`}>
                     {customer.type === "DISTRIBUTER" ? <Users className="w-4 h-4" /> : <User className="w-4 h-4" />}
                   </div>
                   <div>
-                    <h3 className="font-semibold text-zinc-900 dark:text-zinc-100">{customer.name}</h3>
+                    <h3 className="font-semibold text-zinc-900 dark:text-zinc-100 group-hover:text-zinc-600 dark:group-hover:text-zinc-300 transition-colors">
+                      {customer.name}
+                    </h3>
                     <p className="text-xs text-zinc-500">{customer.type}</p>
                   </div>
                 </div>
