@@ -38,7 +38,7 @@ export function useAdminAuth() {
 
   useEffect(() => {
     checkAuth();
-  });
+  },[]);
 
   return { admin, loading, logout };
 }

@@ -96,28 +96,6 @@ export async function createOrderDB(input: CreateOrderInput) {
         subtotal: item.quantityBags * item.pricePerBag,
       })),
     });
-
-    // 6. Deduct stock + ledger
-    for (const item of items) {
-      await tx.finishedFeedStock.update({
-        where: { feedCategoryId: item.feedCategoryId },
-        data: {
-          quantityAvailable: {
-            decrement: item.quantityBags,
-          },
-        },
-      });
-
-      await tx.finishedFeedStockTransaction.create({
-        data: {
-          feedCategoryId: item.feedCategoryId,
-          adminUserId,
-          type: "SALE_OUT",
-          quantityBags: item.quantityBags,
-          orderId: order.id,
-        },
-      });
-    }
   });
 }
 
@@ -232,9 +210,7 @@ interface UpdateOrderStatusInput {
   status: OrderStatus;
 }
 
-export async function updateOrderStatusDB(
-  input: UpdateOrderStatusInput
-) {
+export async function updateOrderStatusDB(input: UpdateOrderStatusInput) {
   const { orderId, status } = input;
 
   return prisma.$transaction(async (tx) => {
@@ -242,8 +218,8 @@ export async function updateOrderStatusDB(
     const order = await tx.order.findUnique({
       where: { id: orderId },
       include: {
-        items: true
-      }
+        items: true,
+      },
     });
 
     if (!order) {
@@ -271,7 +247,7 @@ export async function updateOrderStatusDB(
       // Check stock availability first
       for (const item of order.items) {
         const stock = await tx.finishedFeedStock.findUnique({
-          where: { feedCategoryId: item.feedCategoryId }
+          where: { feedCategoryId: item.feedCategoryId },
         });
 
         if (!stock || stock.quantityAvailable < item.quantityBags) {
@@ -285,9 +261,9 @@ export async function updateOrderStatusDB(
           where: { feedCategoryId: item.feedCategoryId },
           data: {
             quantityAvailable: {
-              decrement: item.quantityBags
-            }
-          }
+              decrement: item.quantityBags,
+            },
+          },
         });
 
         await tx.finishedFeedStockTransaction.create({
@@ -297,8 +273,8 @@ export async function updateOrderStatusDB(
             type: "SALE_OUT",
             quantityBags: item.quantityBags,
             orderId: order.id,
-            notes: "Stock deducted on dispatch"
-          }
+            notes: "Stock deducted on dispatch",
+          },
         });
       }
     }
@@ -307,8 +283,8 @@ export async function updateOrderStatusDB(
     return tx.order.update({
       where: { id: orderId },
       data: {
-        orderStatus: status
-      }
+        orderStatus: status,
+      },
     });
   });
 }
