@@ -11,10 +11,42 @@ import {
   getOrdersDB,
   updateOrderDeliveryDateDB,
   updateOrderStatusDB,
+  getOrderSummaryDB, // NEW IMPORT
 } from "../controllers/order.controller";
 import { OrderStatus } from "@prisma/client";
 
 const router = Router();
+
+/**
+ * NEW: Route to get order summary for dashboard
+ * This must come before "/:id"
+ */
+router.get("/summary", async (req: Request, res: Response) => {
+  try {
+    const { from, to } = req.query;
+
+    if (!from || !to) {
+      return res.status(400).json({
+        success: false,
+        message: "Date range (from, to) is required",
+      });
+    }
+
+    const summary = await getOrderSummaryDB(
+      new Date(from as string),
+      new Date(to as string)
+    );
+
+    return res.status(200).json(summary);
+  } catch (error) {
+    console.error("Fetching order summary failed:", error);
+
+    return res.status(500).json({
+      success: false,
+      message: "Internal Server Error!!",
+    });
+  }
+});
 
 /**
  * Route to create order
@@ -231,7 +263,5 @@ router.put("/:id/delivery-date", async (req: Request, res: Response) => {
     });
   }
 });
-
-
 
 export default router;

@@ -29,7 +29,42 @@ interface UpdateOrderStatusInput {
   status: OrderStatus;
 }
 
-// Route to creat an order in db
+/**
+ * New: Aggregates order totals and status breakdown for dashboard summaries.
+ */
+export async function getOrderSummaryDB(from: Date, to: Date) {
+  const totals = await prisma.order.aggregate({
+    where: {
+      createdAt: { gte: from, lte: to }
+    },
+    _sum: {
+      finalAmount: true,
+      paidAmount: true,
+      dueAmount: true,
+    },
+    _count: {
+      id: true,
+    }
+  });
+
+  const statusCounts = await prisma.order.groupBy({
+    by: ['orderStatus'],
+    where: {
+      createdAt: { gte: from, lte: to }
+    },
+    _count: {
+      id: true,
+    }
+  });
+
+  return {
+    totals: totals._sum,
+    totalOrders: totals._count.id,
+    statusBreakdown: statusCounts
+  };
+}
+
+// Route to create an order in db
 export async function createOrderDB(input: CreateOrderInput) {
   const { customerId, adminUserId, items, discountType, discountValue, deliveryDate } = input;
 
@@ -44,7 +79,7 @@ export async function createOrderDB(input: CreateOrderInput) {
       throw new Error("Customer not found!!");
     }
 
-    // 2. Validate stock & calcuate totals
+    // 2. Validate stock & calculate totals
     let totalAmount = 0;
 
     for (const item of items) {
@@ -203,11 +238,6 @@ export async function getOrderByIdDB(input: GetOrderByIdInput) {
       },
     },
   });
-}
-
-interface UpdateOrderStatusInput {
-  orderId: string;
-  status: OrderStatus;
 }
 
 export async function updateOrderStatusDB(input: UpdateOrderStatusInput) {

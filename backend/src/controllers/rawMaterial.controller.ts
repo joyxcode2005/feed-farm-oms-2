@@ -1,6 +1,48 @@
 import { MaterialUnit, StockTransactionType } from "@prisma/client";
 import prisma from "../config/prisma";
 
+/**
+ * NEW: Aggregates total raw material movements across all materials.
+ * Provides a global summary for purchases and consumption in a date range.
+ */
+export async function getRawMaterialsSummaryDB(from: Date, to: Date) {
+  const transactions = await prisma.rawMaterialStockTransaction.groupBy({
+    by: ['type'],
+    where: {
+      createdAt: { gte: from, lte: to }
+    },
+    _sum: {
+      quantity: true
+    }
+  });
+
+  const summary = {
+    totalIn: transactions.find(t => t.type === "IN")?._sum.quantity || 0,
+    totalOut: transactions.find(t => t.type === "OUT")?._sum.quantity || 0,
+    totalAdjustments: transactions.find(t => t.type === "ADJUSTMENT")?._sum.quantity || 0,
+  };
+
+  return summary;
+}
+
+/**
+ * Fetches daily stock snapshots for a specific raw material over a set period.
+ */
+export async function getRawMaterialSummaryDashboard(rawMaterialId: string, days: number = 7) {
+  return prisma.rawMaterialDailySnapshot.findMany({
+    where: { rawMaterialId },
+    orderBy: { date: "desc" },
+    take: days,
+    select: {
+      date: true,
+      openingStockKg: true,
+      totalInKg: true,
+      totalOutKg: true,
+      closingStockKg: true,
+    },
+  });
+}
+
 export async function checkExistingRawMaterial(name: string) {
   return prisma.rawMaterial.findFirst({
     where: {

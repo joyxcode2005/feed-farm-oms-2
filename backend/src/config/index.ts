@@ -20,3 +20,6 @@ export const corsOptions = {
   },
   credentials: true,
 };
+
+
+export const scheduleTime = "*/5 * * * *"

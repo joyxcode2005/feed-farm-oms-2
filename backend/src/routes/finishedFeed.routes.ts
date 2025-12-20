@@ -6,6 +6,7 @@ import {
   getFinishedFeedCategoryWithStock,
   getFinishedFeedLedgerDB,
   getFinishedFeedSnapshotsDB,
+  getFinishedFeedSummaryDB, // NEW IMPORT
 } from "../controllers/finishedFeed.controller";
 import {
   finishedFeedAdjustSchema,
@@ -14,6 +15,36 @@ import {
 } from "../config/types";
 
 const router = Router();
+
+/**
+ * NEW: Route to get finished feed summary for dashboard
+ */
+router.get("/summary", async (req: Request, res: Response) => {
+  try {
+    const { from, to } = req.query;
+
+    if (!from || !to) {
+      return res.status(400).json({
+        success: false,
+        message: "Date range (from, to) is required",
+      });
+    }
+
+    const summary = await getFinishedFeedSummaryDB(
+      new Date(from as string),
+      new Date(to as string)
+    );
+
+    return res.status(200).json(summary);
+  } catch (error) {
+    console.error("Fetching finished feed summary failed:", error);
+
+    return res.status(500).json({
+      success: false,
+      message: "Internal Server Error!!",
+    });
+  }
+});
 
 // Route to get all finished feed stock
 router.get("/stock", async (req: Request, res: Response) => {
@@ -230,7 +261,5 @@ router.get("/:feedCategoryId/snapshots", async (req: Request, res: Response) => 
     });
   }
 });
-
-
 
 export default router;

@@ -1,5 +1,30 @@
 import prisma from "../config/prisma";
 
+/**
+ * NEW: Aggregates production and sales data for finished feed dashboard.
+ * Provides high-level totals for a specific date range.
+ */
+export async function getFinishedFeedSummaryDB(from: Date, to: Date) {
+  const transactions = await prisma.finishedFeedStockTransaction.groupBy({
+    by: ['type'],
+    where: {
+      createdAt: { gte: from, lte: to }
+    },
+    _sum: {
+      quantityBags: true
+    }
+  });
+
+  // Transform the grouped data into a readable summary object
+  const summary = {
+    totalProduced: transactions.find(t => t.type === "PRODUCTION_IN")?._sum.quantityBags || 0,
+    totalSold: transactions.find(t => t.type === "SALE_OUT")?._sum.quantityBags || 0,
+    totalAdjustments: transactions.find(t => t.type === "ADJUSTMENT")?._sum.quantityBags || 0,
+  };
+
+  return summary;
+}
+
 export const getFinishedFeedCategoryWithStock = () =>
   prisma.feedCategory.findMany({
     select: {
