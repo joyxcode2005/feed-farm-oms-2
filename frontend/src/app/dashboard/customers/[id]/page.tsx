@@ -84,7 +84,7 @@ export default function CustomerDetailPage({
     <div className="space-y-6 max-w-6xl mx-auto p-4 sm:p-6">
       {/* Navigation */}
       <button 
-        onClick={() => router.push('/dashboard?view=Customers')} 
+        onClick={() => router.push('/dashboard/customers')} 
         className="flex items-center gap-2 text-zinc-500 hover:text-zinc-900 transition-colors group mb-2"
       >
         <ArrowLeft className="w-4 h-4 group-hover:-translate-x-1 transition-transform" /> 

@@ -1,67 +1,76 @@
-// frontend/src/helpers/sidebarItems.tsx
-
-import React from "react";
-import { SidebarPageType } from "../config";
 import {
+  CircleDollarSign,
   Factory,
   LayoutDashboard,
   Map,
   Package,
   Settings,
   ShoppingCart,
-  Users,
   UserCircle,
-  Currency, // <--- Import this
+  Users,
 } from "lucide-react";
+import { SidebarPageType } from "../config";
 
-export const sidebarItems: {
+export interface SidebarItem {
   key: SidebarPageType;
-  label: SidebarPageType;
+  label: string;
+  href: string;
   icon: React.ReactNode;
-}[] = [
+}
+
+export const sidebarItems: SidebarItem[] = [
   {
     key: "Dashboard",
     label: "Dashboard",
-    icon: <LayoutDashboard size={16} />,
+    href: "/dashboard",
+    icon: <LayoutDashboard size={18} />,
   },
   {
     key: "Raw Material Stock",
     label: "Raw Material Stock",
-    icon: <Package size={16} />,
+    href: "/dashboard/raw-materials",
+    icon: <Package size={18} />,
   },
   {
     key: "Finished Feed Stock",
     label: "Finished Feed Stock",
-    icon: <Factory size={16} />,
+    href: "/dashboard/finished-feed",
+    icon: <Factory size={18} />,
   },
   {
     key: "Orders",
     label: "Orders",
-    icon: <ShoppingCart size={16} />,
+    href: "/dashboard/orders",
+    icon: <ShoppingCart size={18} />,
   },
   {
-    key: "Customers", 
+    key: "Customers",
     label: "Customers",
-    icon: <UserCircle size={16} />,
+    href: "/dashboard/customers",
+    icon: <UserCircle size={18} />,
   },
   {
-    key: "Payments", 
+    key: "Payments",
     label: "Payments",
-    icon: <Currency size={16} />,
+    href: "/dashboard/payments",
+    icon: <CircleDollarSign size={18} />,
   },
   {
     key: "Admins",
     label: "Admins",
-    icon: <Users size={16} />,
+    href: "/dashboard/admins",
+    icon: <Users size={18} />,
   },
   {
     key: "Settings",
     label: "Settings",
-    icon: <Settings size={16} />,
+    href: "/dashboard/settings",
+    icon: <Settings size={18} />,
   },
   {
     key: "Map",
     label: "Map",
-    icon: <Map size={16} />,
+    href: "/dashboard/map",
+    icon: <Map size={18} />,
   },
 ];
