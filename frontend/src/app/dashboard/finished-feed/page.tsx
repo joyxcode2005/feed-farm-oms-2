@@ -1,25 +1,19 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
 "use client";
 
 import { useEffect, useState } from "react";
 import { api } from "@/src/config";
 import toast from "react-hot-toast";
-import {
-  SlidersHorizontal,
-  Factory,
-  Package,
-  Settings,
-  PawPrint,
-} from "lucide-react";
-
-// Absolute imports for better modularity
+import { Plus, SlidersHorizontal, Factory, Package, History, Settings, PawPrint } from "lucide-react";
 import ProductionModal from "@/src/components/ProductionModal";
 import FinishedFeedAdjustmentModal from "@/src/components/FinishedFeedAdjustmentModal";
 import CreateAnimalTypeModal from "@/src/components/CreateAnimalTypeModal";
 import CreateFeedCategoryModal from "@/src/components/CreateFeedCategoryModal";
+import FinishedFeedLedgerModal from "@/src/components/FinishedFeedLedgerModal"; // Import the new modal
 
-// Interface definitions based on existing logic
+// Interface matches the API response structure
 interface FeedStock {
-  feedCategroyId: string;
+  feedCategroyId: string; // Note: maintaining the backend typo
   animalType: string;
   feedName: string;
   unitSize: number;
@@ -46,7 +40,7 @@ interface FeedCategory {
 
 type TabType = "stock" | "setup";
 
-export default function FinishedFeedPage() {
+export default function FinishedFeedStock() {
   const [activeTab, setActiveTab] = useState<TabType>("stock");
   const [stock, setStock] = useState<FeedStock[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -60,6 +54,7 @@ export default function FinishedFeedPage() {
   // Modals state
   const [isProducing, setIsProducing] = useState(false);
   const [adjustmentItem, setAdjustmentItem] = useState<FeedStock | null>(null);
+  const [ledgerItem, setLedgerItem] = useState<FeedStock | null>(null); // New state for ledger
   const [showAnimalTypeModal, setShowAnimalTypeModal] = useState(false);
   const [showFeedCategoryModal, setShowFeedCategoryModal] = useState(false);
 
@@ -68,7 +63,6 @@ export default function FinishedFeedPage() {
       const res = await api.get("/finished-feed/stock");
       setStock(res.data.data);
     } catch (error) {
-      console.log("Failed to fetch feed stock.", error);
       toast.error("Failed to fetch feed stock");
     } finally {
       setIsLoading(false);
@@ -81,7 +75,6 @@ export default function FinishedFeedPage() {
       const res = await api.get("/animal-types");
       setAnimalTypes(res.data.data);
     } catch (error) {
-      console.log("Failed to fetch animal types.", error);
       toast.error("Failed to fetch animal types");
     } finally {
       setLoadingTypes(false);
@@ -94,7 +87,6 @@ export default function FinishedFeedPage() {
       const res = await api.get("/feed-categories");
       setFeedCategories(res.data.data);
     } catch (error) {
-      console.log("Failed to fetch feed categories", error);
       toast.error("Failed to fetch feed categories");
     } finally {
       setLoadingCategories(false);
@@ -136,11 +128,11 @@ export default function FinishedFeedPage() {
               Manage production, inventory, and feed configurations.
             </p>
           </div>
-
+          
           {activeTab === "stock" && (
             <button
               onClick={() => setIsProducing(true)}
-              className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white text-sm font-medium rounded-lg hover:bg-indigo-700 transition-all shadow-sm"
+              className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white text-sm font-medium rounded-lg hover:bg-indigo-700 transition-all shadow-sm cursor-pointer"
             >
               <Factory className="w-4 h-4" />
               Record Production
@@ -151,14 +143,14 @@ export default function FinishedFeedPage() {
             <div className="flex gap-3">
               <button
                 onClick={() => setShowAnimalTypeModal(true)}
-                className="flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white text-sm font-medium rounded-lg hover:bg-emerald-700 transition-all shadow-sm"
+                className="flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white text-sm font-medium rounded-lg hover:bg-emerald-700 transition-all shadow-sm cursor-pointer"
               >
                 <PawPrint className="w-4 h-4" />
                 New Animal Type
               </button>
               <button
                 onClick={() => setShowFeedCategoryModal(true)}
-                className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white text-sm font-medium rounded-lg hover:bg-indigo-700 transition-all shadow-sm"
+                className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white text-sm font-medium rounded-lg hover:bg-indigo-700 transition-all shadow-sm cursor-pointer"
               >
                 <Package className="w-4 h-4" />
                 New Feed Category
@@ -171,7 +163,7 @@ export default function FinishedFeedPage() {
         <div className="flex gap-2 border-b border-zinc-200 dark:border-zinc-800">
           <button
             onClick={() => setActiveTab("stock")}
-            className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
+            className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors cursor-pointer ${
               activeTab === "stock"
                 ? "border-indigo-600 text-indigo-600 dark:text-indigo-400"
                 : "border-transparent text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-200"
@@ -184,7 +176,7 @@ export default function FinishedFeedPage() {
           </button>
           <button
             onClick={() => setActiveTab("setup")}
-            className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
+            className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors cursor-pointer ${
               activeTab === "setup"
                 ? "border-indigo-600 text-indigo-600 dark:text-indigo-400"
                 : "border-transparent text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-200"
@@ -222,22 +214,15 @@ export default function FinishedFeedPage() {
                   </th>
                 </tr>
               </thead>
+
               <tbody className="divide-y divide-zinc-100 dark:divide-zinc-800/50">
                 {isLoading ? (
                   [...Array(3)].map((_, i) => (
                     <tr key={i} className="animate-pulse">
-                      <td className="px-6 py-4">
-                        <div className="h-4 w-32 bg-zinc-200 dark:bg-zinc-800 rounded"></div>
-                      </td>
-                      <td className="px-6 py-4">
-                        <div className="h-4 w-20 bg-zinc-200 dark:bg-zinc-800 rounded"></div>
-                      </td>
-                      <td className="px-6 py-4">
-                        <div className="h-4 w-16 bg-zinc-200 dark:bg-zinc-800 rounded"></div>
-                      </td>
-                      <td className="px-6 py-4">
-                        <div className="h-4 w-24 bg-zinc-200 dark:bg-zinc-800 rounded"></div>
-                      </td>
+                      <td className="px-6 py-4"><div className="h-4 w-32 bg-zinc-200 dark:bg-zinc-800 rounded"></div></td>
+                      <td className="px-6 py-4"><div className="h-4 w-20 bg-zinc-200 dark:bg-zinc-800 rounded"></div></td>
+                      <td className="px-6 py-4"><div className="h-4 w-16 bg-zinc-200 dark:bg-zinc-800 rounded"></div></td>
+                      <td className="px-6 py-4"><div className="h-4 w-24 bg-zinc-200 dark:bg-zinc-800 rounded"></div></td>
                       <td className="px-6 py-4"></td>
                     </tr>
                   ))
@@ -260,35 +245,39 @@ export default function FinishedFeedPage() {
                       </td>
                       <td className="px-6 py-4">
                         <div className="flex items-center gap-2">
-                          <span
-                            className={`text-lg font-semibold ${
-                              item.quantityAvailableBags < 10
-                                ? "text-amber-600"
-                                : "text-zinc-700 dark:text-zinc-300"
-                            }`}
-                          >
+                          <span className={`text-lg font-semibold ${item.quantityAvailableBags < 10 ? "text-amber-600" : "text-zinc-700 dark:text-zinc-300"}`}>
                             {item.quantityAvailableBags.toLocaleString()}
                           </span>
-                          <span className="text-zinc-400 text-xs mt-1">
-                            Bags
-                          </span>
+                          <span className="text-zinc-400 text-xs mt-1">Bags</span>
                         </div>
                       </td>
                       <td className="px-6 py-4 text-right">
-                        <button
-                          onClick={() => setAdjustmentItem(item)}
-                          className="flex items-center gap-1 px-3 py-1.5 text-xs font-medium text-violet-700 bg-violet-50 hover:bg-violet-100 dark:bg-violet-900/20 dark:text-violet-400 dark:hover:bg-violet-900/30 rounded-md transition-colors border border-violet-100 dark:border-violet-800/50"
-                        >
-                          <SlidersHorizontal className="w-3 h-3" /> Adjust
-                        </button>
+                        <div className="flex justify-end items-center gap-2">
+                          {/* New View Ledger Button */}
+                          <button
+                            onClick={() => setLedgerItem(item)}
+                            className="flex items-center gap-1 px-3 py-1.5 text-xs font-medium text-blue-700 bg-blue-50 hover:bg-blue-100 dark:bg-blue-900/20 dark:text-blue-400 dark:hover:bg-blue-900/30 rounded-md transition-colors border border-blue-100 dark:border-blue-800/50 cursor-pointer"
+                            title="View History"
+                          >
+                            <History className="w-3 h-3" />
+                            Ledger
+                          </button>
+
+                          <button
+                            onClick={() => setAdjustmentItem(item)}
+                            className="flex items-center gap-1 px-3 py-1.5 text-xs font-medium text-violet-700 bg-violet-50 hover:bg-violet-100 dark:bg-violet-900/20 dark:text-violet-400 dark:hover:bg-violet-900/30 rounded-md transition-colors border border-violet-100 dark:border-violet-800/50 cursor-pointer"
+                          >
+                            <SlidersHorizontal className="w-3 h-3" />
+                            Adjust
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   ))
                 ) : (
                   <tr>
                     <td colSpan={5} className="py-12 text-center text-zinc-500">
-                      No finished feed categories found. Go to Setup to add feed
-                      categories.
+                      No finished feed categories found. Go to Setup to add feed categories.
                     </td>
                   </tr>
                 )}
@@ -298,34 +287,44 @@ export default function FinishedFeedPage() {
         </div>
       )}
 
-      {/* Setup Tab Content */}
+      {/* Setup Tab Content remains the same... */}
       {activeTab === "setup" && (
         <div className="space-y-6">
           {/* Animal Types Section */}
           <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl shadow-sm overflow-hidden">
-            <div className="px-6 py-4 border-b border-zinc-200 dark:border-zinc-800 bg-zinc-50/50 dark:bg-zinc-900/50 font-semibold flex items-center gap-2">
-              <PawPrint className="w-5 h-5" /> Animal Types
+            <div className="px-6 py-4 border-b border-zinc-200 dark:border-zinc-800 bg-zinc-50/50 dark:bg-zinc-900/50">
+              <h3 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100 flex items-center gap-2">
+                <PawPrint className="w-5 h-5" />
+                Animal Types
+              </h3>
+              <p className="text-xs text-zinc-500 mt-0.5">
+                {animalTypes.length} {animalTypes.length === 1 ? 'type' : 'types'} registered
+              </p>
             </div>
+
             <div className="p-6">
               {loadingTypes ? (
-                <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 animate-pulse">
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
                   {[...Array(5)].map((_, i) => (
-                    <div
-                      key={i}
-                      className="h-16 bg-zinc-100 dark:bg-zinc-800 rounded-lg"
-                    />
+                    <div key={i} className="h-16 bg-zinc-100 dark:bg-zinc-800 rounded-lg animate-pulse" />
                   ))}
                 </div>
-              ) : (
-                <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
+              ) : animalTypes.length > 0 ? (
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
                   {animalTypes.map((type) => (
                     <div
                       key={type.id}
-                      className="flex items-center justify-center px-4 py-3 rounded-lg border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-800/50 font-medium"
+                      className="flex items-center justify-center px-4 py-3 rounded-lg border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-800/50 hover:border-indigo-300 dark:hover:border-indigo-700 transition-colors"
                     >
-                      {type.name}
+                      <span className="text-sm font-medium text-zinc-900 dark:text-zinc-100">
+                        {type.name}
+                      </span>
                     </div>
                   ))}
+                </div>
+              ) : (
+                <div className="text-center py-8 text-zinc-500">
+                  No animal types added yet
                 </div>
               )}
             </div>
@@ -333,54 +332,81 @@ export default function FinishedFeedPage() {
 
           {/* Feed Categories Section */}
           <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl shadow-sm overflow-hidden">
-            <div className="px-6 py-4 border-b border-zinc-200 dark:border-zinc-800 bg-zinc-50/50 dark:bg-zinc-900/50 font-semibold flex items-center gap-2">
-              <Package className="w-5 h-5" /> Feed Categories
+            <div className="px-6 py-4 border-b border-zinc-200 dark:border-zinc-800 bg-zinc-50/50 dark:bg-zinc-900/50">
+              <h3 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100 flex items-center gap-2">
+                <Package className="w-5 h-5" />
+                Feed Categories
+              </h3>
+              <p className="text-xs text-zinc-500 mt-0.5">
+                {feedCategories.length} {feedCategories.length === 1 ? 'category' : 'categories'} configured
+              </p>
             </div>
+
             <div className="overflow-x-auto">
               <table className="w-full text-sm text-left">
-                <thead className="bg-zinc-50/50 dark:bg-zinc-900/50 border-b border-zinc-200 dark:border-zinc-800 uppercase tracking-wider text-xs text-zinc-500">
+                <thead className="bg-zinc-50/50 dark:bg-zinc-900/50 border-b border-zinc-200 dark:border-zinc-800">
                   <tr>
-                    <th className="px-6 py-4 font-medium">Feed Name</th>
-                    <th className="px-6 py-4 font-medium">Animal Type</th>
-                    <th className="px-6 py-4 font-medium">Unit Size</th>
-                    <th className="px-6 py-4 font-medium">Default Price</th>
-                    <th className="px-6 py-4 font-medium">Created</th>
+                    <th className="px-6 py-4 font-medium text-zinc-500 dark:text-zinc-400 uppercase tracking-wider text-xs">
+                      Feed Name
+                    </th>
+                    <th className="px-6 py-4 font-medium text-zinc-500 dark:text-zinc-400 uppercase tracking-wider text-xs">
+                      Animal Type
+                    </th>
+                    <th className="px-6 py-4 font-medium text-zinc-500 dark:text-zinc-400 uppercase tracking-wider text-xs">
+                      Unit Size
+                    </th>
+                    <th className="px-6 py-4 font-medium text-zinc-500 dark:text-zinc-400 uppercase tracking-wider text-xs">
+                      Default Price
+                    </th>
+                    <th className="px-6 py-4 font-medium text-zinc-500 dark:text-zinc-400 uppercase tracking-wider text-xs">
+                      Created
+                    </th>
                   </tr>
                 </thead>
+
                 <tbody className="divide-y divide-zinc-100 dark:divide-zinc-800/50">
-                  {loadingCategories
-                    ? [...Array(5)].map((_, i) => (
-                        <tr key={i} className="animate-pulse">
-                          <td className="px-6 py-4">
-                            <div className="h-4 w-32 bg-zinc-200 dark:bg-zinc-800 rounded"></div>
-                          </td>
-                          <td colSpan={4} />
-                        </tr>
-                      ))
-                    : feedCategories.map((category) => (
-                        <tr
-                          key={category.id}
-                          className="hover:bg-zinc-50/50 dark:hover:bg-zinc-800/50 transition-colors"
-                        >
-                          <td className="px-6 py-4 font-medium text-zinc-900 dark:text-zinc-100">
-                            {category.name}
-                          </td>
-                          <td className="px-6 py-4">
-                            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400 border border-emerald-200">
-                              {category.animalType.name}
-                            </span>
-                          </td>
-                          <td className="px-6 py-4 text-zinc-600 dark:text-zinc-400">
-                            {category.unitSizeKg} kg
-                          </td>
-                          <td className="px-6 py-4 font-medium">
-                            ₹{category.defaultPrice.toFixed(2)}
-                          </td>
-                          <td className="px-6 py-4 text-zinc-500 text-xs">
-                            {new Date(category.createdAt).toLocaleDateString()}
-                          </td>
-                        </tr>
-                      ))}
+                  {loadingCategories ? (
+                    [...Array(5)].map((_, i) => (
+                      <tr key={i} className="animate-pulse">
+                        <td className="px-6 py-4"><div className="h-4 w-32 bg-zinc-200 dark:bg-zinc-800 rounded"></div></td>
+                        <td className="px-6 py-4"><div className="h-4 w-20 bg-zinc-200 dark:bg-zinc-800 rounded"></div></td>
+                        <td className="px-6 py-4"><div className="h-4 w-16 bg-zinc-200 dark:bg-zinc-800 rounded"></div></td>
+                        <td className="px-6 py-4"><div className="h-4 w-20 bg-zinc-200 dark:bg-zinc-800 rounded"></div></td>
+                        <td className="px-6 py-4"><div className="h-4 w-24 bg-zinc-200 dark:bg-zinc-800 rounded"></div></td>
+                      </tr>
+                    ))
+                  ) : feedCategories.length > 0 ? (
+                    feedCategories.map((category) => (
+                      <tr
+                        key={category.id}
+                        className="group hover:bg-zinc-50/50 dark:hover:bg-zinc-800/50 transition-colors"
+                      >
+                        <td className="px-6 py-4 font-medium text-zinc-900 dark:text-zinc-100">
+                          {category.name}
+                        </td>
+                        <td className="px-6 py-4">
+                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800/50">
+                            {category.animalType.name}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4 text-zinc-600 dark:text-zinc-400">
+                          {category.unitSizeKg} kg
+                        </td>
+                        <td className="px-6 py-4 font-medium text-zinc-900 dark:text-zinc-100">
+                          ₹{category.defaultPrice.toFixed(2)}
+                        </td>
+                        <td className="px-6 py-4 text-zinc-500 dark:text-zinc-400 text-xs">
+                          {new Date(category.createdAt).toLocaleDateString()}
+                        </td>
+                      </tr>
+                    ))
+                  ) : (
+                    <tr>
+                      <td colSpan={5} className="py-12 text-center text-zinc-500">
+                        No feed categories added yet
+                      </td>
+                    </tr>
+                  )}
                 </tbody>
               </table>
             </div>
@@ -398,6 +424,7 @@ export default function FinishedFeedPage() {
           }}
         />
       )}
+
       {adjustmentItem && (
         <FinishedFeedAdjustmentModal
           item={adjustmentItem}
@@ -408,12 +435,22 @@ export default function FinishedFeedPage() {
           }}
         />
       )}
+
+      {/* Rendering the new Ledger Modal */}
+      {ledgerItem && (
+        <FinishedFeedLedgerModal
+          item={{ feedCategroyId: ledgerItem.feedCategroyId, feedName: ledgerItem.feedName }}
+          onClose={() => setLedgerItem(null)}
+        />
+      )}
+
       {showAnimalTypeModal && (
         <CreateAnimalTypeModal
           onClose={() => setShowAnimalTypeModal(false)}
           onCreated={handleAnimalTypeCreated}
         />
       )}
+
       {showFeedCategoryModal && (
         <CreateFeedCategoryModal
           onClose={() => setShowFeedCategoryModal(false)}
