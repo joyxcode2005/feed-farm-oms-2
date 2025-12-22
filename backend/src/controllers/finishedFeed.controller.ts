@@ -128,7 +128,7 @@ export async function createProductionBatchDB(input: CreateProductionBatchInput)
   });
 }
 
-interface FinishedFeedSaleInput {
+winterface FinishedFeedSaleInput {
   feedCategoryId: string;
   orderId: string;
   quantityBags: number;
