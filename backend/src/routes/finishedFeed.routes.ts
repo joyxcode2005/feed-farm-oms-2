@@ -32,7 +32,7 @@ router.get("/summary", async (req: Request, res: Response) => {
 
     const summary = await getFinishedFeedSummaryDB(
       new Date(from as string),
-      new Date(to as string)
+      new Date(to as string),
     );
 
     return res.status(200).json(summary);
@@ -106,7 +106,13 @@ router.post("/production", async (req: Request, res: Response) => {
       message: "Production batch recorded successfully",
       data: result,
     });
-  } catch (error) {
+  } catch (error: any) {
+    if (error?.message?.includes("Insufficient stock for raw material")) {
+      return res.status(400).json({
+        success: false,
+        message: "Insufficient stock for raw material!!",
+      });
+    }
     console.error("Finished feed production failed:", error);
 
     return res.status(500).json({
@@ -168,7 +174,7 @@ router.post("/sale", async (req: Request, res: Response) => {
 router.post("/adjust", async (req: Request, res: Response) => {
   try {
     const parsed = finishedFeedAdjustSchema.safeParse(req.body);
-    const adminUserId = (req as any).adminId
+    const adminUserId = (req as any).adminId;
     if (!parsed.success) {
       return res.status(400).json({
         success: false,
@@ -192,20 +198,20 @@ router.post("/adjust", async (req: Request, res: Response) => {
       data: result,
     });
   } catch (error: any) {
-  if (error.message === "FEED_CATEGORY_NOT_FOUND") {
-    return res.status(404).json({
+    if (error.message === "FEED_CATEGORY_NOT_FOUND") {
+      return res.status(404).json({
+        success: false,
+        message: "Feed category does not exist",
+      });
+    }
+
+    console.error("Finished feed adjustment failed:", error);
+
+    return res.status(500).json({
       success: false,
-      message: "Feed category does not exist"
+      message: "Internal Server Error!!",
     });
   }
-
-  console.error("Finished feed adjustment failed:", error);
-
-  return res.status(500).json({
-    success: false,
-    message: "Internal Server Error!!",
-  });
-}
 });
 
 // Route to get finished feed ledger

@@ -6,20 +6,20 @@ import prisma from "../config/prisma";
  */
 export async function getFinishedFeedSummaryDB(from: Date, to: Date) {
   const transactions = await prisma.finishedFeedStockTransaction.groupBy({
-    by: ['type'],
+    by: ["type"],
     where: {
-      createdAt: { gte: from, lte: to }
+      createdAt: { gte: from, lte: to },
     },
     _sum: {
-      quantityBags: true
-    }
+      quantityBags: true,
+    },
   });
 
   // Transform the grouped data into a readable summary object
   const summary = {
-    totalProduced: transactions.find(t => t.type === "PRODUCTION_IN")?._sum.quantityBags || 0,
-    totalSold: transactions.find(t => t.type === "SALE_OUT")?._sum.quantityBags || 0,
-    totalAdjustments: transactions.find(t => t.type === "ADJUSTMENT")?._sum.quantityBags || 0,
+    totalProduced: transactions.find((t) => t.type === "PRODUCTION_IN")?._sum.quantityBags || 0,
+    totalSold: transactions.find((t) => t.type === "SALE_OUT")?._sum.quantityBags || 0,
+    totalAdjustments: transactions.find((t) => t.type === "ADJUSTMENT")?._sum.quantityBags || 0,
   };
 
   return summary;
@@ -62,73 +62,133 @@ interface CreateProductionBatchInput {
 export async function createProductionBatchDB(input: CreateProductionBatchInput) {
   const { feedCategoryId, producedBags, productionDate, adminUserId, notes, materialsUsed } = input;
 
-  return prisma.$transaction(async (tx) => {
-    // 1. Create production batch
-    const batch = await tx.productionBatch.create({
-      data: {
-        feedCategoryId,
-        adminUserId,
-        batchNumber: `PB-${Date.now()}`,
-        producedBags,
-        productionDate,
-      },
-    });
+  const batchNumber = `PB-${Date.now()}`;
 
-    // 2. Consume raw materials
-    for (const material of materialsUsed) {
-      await tx.rawMaterialStockTransaction.create({
-        data: {
-          rawMaterialId: material.rawMaterialId,
-          adminUserId,
-          type: "OUT",
-          quantity: material.quantity,
-          referenceType: "PRODUCTION",
-          referenceId: batch.id,
-        },
-      });
+  /**
+   * STEP 1: Aggregate required quantity per raw material
+   */
+  const requiredByMaterial = new Map<string, number>();
 
-      await tx.productionBatchMaterial.create({
-        data: {
-          batchId: batch.id,
-          rawMaterialId: material.rawMaterialId,
-          quantityKg: material.quantity,
-        },
-      });
-    }
+  for (const m of materialsUsed) {
+    requiredByMaterial.set(
+      m.rawMaterialId,
+      (requiredByMaterial.get(m.rawMaterialId) ?? 0) + m.quantity,
+    );
+  }
 
-    // 3. Update finished feed stock
-    const stock = await tx.finishedFeedStock.upsert({
-      where: { feedCategoryId },
-      update: {
-        quantityAvailable: { increment: producedBags },
-      },
-      create: {
-        feedCategoryId,
-        quantityAvailable: producedBags,
-      },
-    });
+  const materialIds = [...requiredByMaterial.keys()];
 
-    // 4. Finished feed ledger
-    const ledger = await tx.finishedFeedStockTransaction.create({
-      data: {
-        feedCategoryId,
-        adminUserId,
-        type: "PRODUCTION_IN",
-        quantityBags: producedBags,
-        productionBatchId: batch.id,
-        notes,
-      },
-    });
-
-    return {
-      batch,
-      stock,
-      ledger,
-    };
+  /**
+   * STEP 2: Compute current stock from ledger
+   * stock = SUM(IN) - SUM(OUT)
+   */
+  const stockAggregates = await prisma.rawMaterialStockTransaction.groupBy({
+    by: ["rawMaterialId", "type"],
+    where: {
+      rawMaterialId: { in: materialIds },
+    },
+    _sum: {
+      quantity: true,
+    },
   });
+
+  const availableByMaterial = new Map<string, number>();
+
+  for (const row of stockAggregates) {
+    const current = availableByMaterial.get(row.rawMaterialId) ?? 0;
+    const qty = row._sum.quantity ?? 0;
+
+    availableByMaterial.set(row.rawMaterialId, row.type === "IN" ? current + qty : current - qty);
+  }
+
+  /**
+   * STEP 3: Validate availability
+   */
+  for (const [rawMaterialId, requiredQty] of requiredByMaterial.entries()) {
+    const availableQty = availableByMaterial.get(rawMaterialId) ?? 0;
+
+    if (availableQty < requiredQty) {
+      throw new Error(
+        `Insufficient stock for raw material ${rawMaterialId}. Required: ${requiredQty}, Available: ${availableQty}`,
+      );
+    }
+  }
+
+  /**
+   * STEP 4: Create production batch
+   */
+  const batch = await prisma.productionBatch.create({
+    data: {
+      feedCategoryId,
+      adminUserId,
+      batchNumber,
+      producedBags,
+      productionDate,
+    },
+  });
+
+  /**
+   * STEP 5: Prepare DB writes
+   */
+  const rawMaterialTxns = materialsUsed.map((material) =>
+    prisma.rawMaterialStockTransaction.create({
+      data: {
+        rawMaterialId: material.rawMaterialId,
+        adminUserId,
+        type: "OUT",
+        quantity: material.quantity,
+        referenceType: "PRODUCTION",
+        referenceId: batch.id,
+      },
+    }),
+  );
+
+  const batchMaterials = materialsUsed.map((material) =>
+    prisma.productionBatchMaterial.create({
+      data: {
+        batchId: batch.id,
+        rawMaterialId: material.rawMaterialId,
+        quantityKg: material.quantity,
+      },
+    }),
+  );
+
+  const finishedStockUpsert = prisma.finishedFeedStock.upsert({
+    where: { feedCategoryId },
+    update: {
+      quantityAvailable: { increment: producedBags },
+    },
+    create: {
+      feedCategoryId,
+      quantityAvailable: producedBags,
+    },
+  });
+
+  const ledgerCreate = prisma.finishedFeedStockTransaction.create({
+    data: {
+      feedCategoryId,
+      adminUserId,
+      type: "PRODUCTION_IN",
+      quantityBags: producedBags,
+      productionBatchId: batch.id,
+      notes,
+    },
+  });
+
+  /**
+   * STEP 6: ONE array transaction (Neon-safe)
+   */
+  await prisma.$transaction([
+    ...rawMaterialTxns,
+    ...batchMaterials,
+    finishedStockUpsert,
+    ledgerCreate,
+  ]);
+
+  return { batch };
 }
 
-winterface FinishedFeedSaleInput {
+interface FinishedFeedSaleInput {
   feedCategoryId: string;
   orderId: string;
   quantityBags: number;
@@ -192,7 +252,7 @@ export async function adjustFinishedFeedStockDB(input: FinishedFeedAdjustmentInp
     // 0. Ensure feed category exists
     const category = await tx.feedCategory.findUnique({
       where: { id: feedCategoryId },
-      select: { id: true }
+      select: { id: true },
     });
 
     if (!category) {
@@ -227,7 +287,6 @@ export async function adjustFinishedFeedStockDB(input: FinishedFeedAdjustmentInp
     return { stock, ledger };
   });
 }
-
 
 interface GetFinishedFeedLedgerInput {
   feedCategoryId: string;
