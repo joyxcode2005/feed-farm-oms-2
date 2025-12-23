@@ -53,7 +53,7 @@ router.post("/", async (req: Request, res: Response) => {
 
     return res.status(500).json({
       success: false,
-      message: "Internal Server Error!!",
+      message: "Internal Server Error!!(This internal server error in the catch block!!!",
     });
   }
 });

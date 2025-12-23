@@ -44,15 +44,22 @@ export default function Dashboard({
           to: today.toISOString(),
         };
 
-        const [custRes, matRes,, ordSum, feedSum, rawSum] =
-          await Promise.all([
-            api.get("/customers"),
-            api.get("/raw-materials"),
-            api.get("/finished-feed/stock"),
-            api.get("/orders/summary", { params }),
-            api.get("/finished-feed/summary", { params }),
-            api.get("/raw-materials/summary", { params }),
-          ]);
+        const [custRes, matRes, , ordSum, feedSum, rawSum] = await Promise.all([
+          api.get("/customers"),
+          api.get("/raw-materials"),
+          api.get("/finished-feed/stock"),
+          api.get("/orders/summary", { params }),
+          api.get("/finished-feed/summary", { params }),
+          api.get("/raw-materials/summary", { params }),
+        ]);
+
+        console.log("Fetched dashboard data", {
+          custRes,
+          matRes,
+          ordSum,
+          feedSum,
+          rawSum,
+        });
 
         // REFINED LOW STOCK LOGIC:
         // KG < 10 and TON < 5
@@ -112,19 +119,19 @@ export default function Dashboard({
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         <SummaryCard
           title="Revenue"
-          value={`₹${summaries.orders.totals.finalAmount.toLocaleString()}`}
+          value={`₹${summaries.orders.totals.finalAmount}`}
           icon={IndianRupee}
           color="bg-blue-50 text-blue-600"
         />
         <SummaryCard
           title="Collected"
-          value={`₹${summaries.orders.totals.paidAmount.toLocaleString()}`}
+          value={`₹${summaries.orders.totals.paidAmount}`}
           icon={CheckCircle2}
           color="bg-emerald-50 text-emerald-600"
         />
         <SummaryCard
           title="Outstanding"
-          value={`₹${summaries.orders.totals.dueAmount.toLocaleString()}`}
+          value={`₹${summaries.orders.totals.dueAmount}`}
           icon={AlertTriangle}
           color="bg-rose-50 text-rose-600"
         />
@@ -173,7 +180,7 @@ export default function Dashboard({
                 Purchased (In)
               </p>
               <p className="text-2xl font-bold text-emerald-600">
-                {summaries.rawMaterials.totalIn.toLocaleString()} kg
+                {summaries.rawMaterials.totalIn} kg
               </p>
             </div>
             <div className="p-4 bg-amber-50 dark:bg-amber-900/20 rounded-lg">
@@ -181,7 +188,7 @@ export default function Dashboard({
                 Consumed (Out)
               </p>
               <p className="text-2xl font-bold text-amber-600">
-                {summaries.rawMaterials.totalOut.toLocaleString()} kg
+                {summaries.rawMaterials.totalOut} kg
               </p>
             </div>
           </div>
