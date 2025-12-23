@@ -56,13 +56,13 @@ export default function CreateOrderModal({ onClose, onCreated }: CreateOrderModa
   // Order Form State
   const [deliveryDate, setDeliveryDate] = useState("");
   const [selectedAnimalType, setSelectedAnimalType] = useState("");
-  const [discountType, setDiscountType] = useState<"FLAT" | "PERCENTAGE">("FLAT");
+  const [discountType, setDiscountType] = useState<"NONE" | "FLAT" | "PERCENTAGE">("NONE");
   const [discountValue, setDiscountValue] = useState(0);
   const [items, setItems] = useState<OrderItemRow[]>([
     { feedCategoryId: "", quantityBags: 1, pricePerBag: 0 }
   ]);
 
-  // Fetch Initial Data (Products only)
+  // Fetch Initial Data
   useEffect(() => {
     const fetchData = async () => {
       try {
@@ -87,11 +87,9 @@ export default function CreateOrderModal({ onClose, onCreated }: CreateOrderModa
       
       setCheckingPhone(true);
       try {
-        // Updated call: GET /customers/phone?phone=...
         const res = await api.get(`/customers/phone?phone=${phone}`);
         
         if (res.data.data) {
-          // Customer Found
           const cust = res.data.data;
           setSelectedCustomerId(cust.id);
           setCustomerName(cust.name);
@@ -102,16 +100,12 @@ export default function CreateOrderModal({ onClose, onCreated }: CreateOrderModa
           toast.success("Existing customer found!");
         }
       } catch (error: any) {
-        // Customer Not Found (404)
         if (error.response?.status === 404) {
           setSelectedCustomerId(null);
           setIsNewCustomer(true);
-          // Clear fields for new entry
           setCustomerName("");
           setCustomerDistrict("");
           setCustomerAddress("");
-        } else {
-          console.error(error);
         }
       } finally {
         setCheckingPhone(false);
@@ -131,7 +125,6 @@ export default function CreateOrderModal({ onClose, onCreated }: CreateOrderModa
     checkPhone(phoneSearch);
   }, [phoneSearch, checkPhone]);
 
-  // Filter categories based on selected animal type
   const filteredFeedCategories = selectedAnimalType
     ? feedCategories.filter((f) => f.animalType.id === selectedAnimalType)
     : feedCategories;
@@ -157,10 +150,16 @@ export default function CreateOrderModal({ onClose, onCreated }: CreateOrderModa
     }
   };
 
+  // --- Updated Calculation Logic ---
   const subtotal = items.reduce((sum, item) => sum + (item.quantityBags * item.pricePerBag), 0);
-  const discountAmount = discountType === "FLAT" 
-    ? discountValue 
-    : (subtotal * discountValue) / 100;
+  
+  const discountAmount = 
+    discountType === "NONE" 
+      ? 0 
+      : discountType === "FLAT" 
+        ? discountValue 
+        : (subtotal * discountValue) / 100;
+
   const finalAmount = Math.max(0, subtotal - discountAmount);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -168,7 +167,6 @@ export default function CreateOrderModal({ onClose, onCreated }: CreateOrderModa
     if (!deliveryDate) return toast.error("Delivery date is required");
     if (!phoneSearch || phoneSearch.length < 8) return toast.error("Valid phone number required");
     
-    // Validate Items
     if (items.some(i => !i.feedCategoryId || i.quantityBags <= 0)) {
       return toast.error("Please fill in valid item details");
     }
@@ -177,40 +175,40 @@ export default function CreateOrderModal({ onClose, onCreated }: CreateOrderModa
     try {
       let finalCustomerId = selectedCustomerId;
 
-      // 1. Create Customer if New
       if (isNewCustomer && !finalCustomerId) {
         if (!customerName || !customerDistrict) {
           setLoading(false);
           return toast.error("Name and District required for new customer");
         }
         
-        try {
-          const custRes = await api.post("/customers", {
-            name: customerName,
-            phone: phoneSearch,
-            district: customerDistrict,
-            address: customerAddress,
-            type: customerType
-          });
-          finalCustomerId = custRes.data.data.id;
-        } catch (err: any) {
-          setLoading(false);
-          return toast.error(err.response?.data?.message || "Failed to create customer");
-        }
+        const custRes = await api.post("/customers", {
+          name: customerName,
+          phone: phoneSearch,
+          district: customerDistrict,
+          address: customerAddress,
+          type: customerType
+        });
+        finalCustomerId = custRes.data.data.id;
       }
 
-      // 2. Create Order
-      await api.post("/orders", {
+      // --- Updated Payload Preparation ---
+      const payload: any = {
         customerId: finalCustomerId,
         deliveryDate,
-        discountType,
-        discountValue: Number(discountValue),
         items: items.map(i => ({
           feedCategoryId: i.feedCategoryId,
           quantityBags: Number(i.quantityBags),
           pricePerBag: Number(i.pricePerBag)
         }))
-      });
+      };
+
+      // Only add discount fields if they are valid for the backend
+      if (discountType !== "NONE" && discountValue > 0) {
+        payload.discountType = discountType;
+        payload.discountValue = Number(discountValue);
+      }
+
+      await api.post("/orders", payload);
 
       toast.success(isNewCustomer ? "Customer & Order created!" : "Order created successfully");
       onCreated();
@@ -240,7 +238,6 @@ export default function CreateOrderModal({ onClose, onCreated }: CreateOrderModa
             </h4>
             
             <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-              {/* Phone Input */}
               <div className="col-span-full md:col-span-1">
                 <label className="block text-xs font-medium text-zinc-500 mb-1">Phone Number</label>
                 <div className="relative">
@@ -274,7 +271,6 @@ export default function CreateOrderModal({ onClose, onCreated }: CreateOrderModa
                 )}
               </div>
 
-              {/* Name Input */}
               <div>
                 <label className="block text-xs font-medium text-zinc-500 mb-1">Customer Name</label>
                 <input 
@@ -288,7 +284,6 @@ export default function CreateOrderModal({ onClose, onCreated }: CreateOrderModa
                 />
               </div>
 
-              {/* Collapsible/Conditional Fields for New Customer */}
               <div className={`col-span-full grid grid-cols-1 md:grid-cols-2 gap-5 transition-all duration-300 ${isNewCustomer || selectedCustomerId ? 'opacity-100 max-h-96' : 'opacity-0 max-h-0 hidden'}`}>
                  <div>
                     <label className="block text-xs font-medium text-zinc-500 mb-1">District</label>
@@ -437,16 +432,11 @@ export default function CreateOrderModal({ onClose, onCreated }: CreateOrderModa
                     </tbody>
                   </table>
                 </div>
-                {filteredFeedCategories.length === 0 && selectedAnimalType && (
-                  <p className="text-xs text-amber-600 flex items-center gap-1">
-                    <AlertCircle className="w-3 h-3" /> No feed products found for this animal type.
-                  </p>
-                )}
              </div>
 
-             {/* Totals */}
+             {/* Totals Section */}
              <div className="flex flex-col items-end pt-4 border-t border-zinc-100 dark:border-zinc-800 space-y-3">
-                <div className="w-full md:w-72 space-y-2">
+                <div className="w-full md:w-80 space-y-2">
                    <div className="flex justify-between text-sm text-zinc-600 dark:text-zinc-400">
                       <span>Subtotal</span>
                       <span>₹{subtotal.toLocaleString()}</span>
@@ -454,20 +444,26 @@ export default function CreateOrderModal({ onClose, onCreated }: CreateOrderModa
                    
                    <div className="flex items-center gap-2">
                       <select 
-                        className="w-24 text-xs px-2 py-1.5 rounded border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800"
+                        className="w-32 text-xs px-2 py-1.5 rounded border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800"
                         value={discountType}
-                        onChange={(e) => setDiscountType(e.target.value as any)}
+                        onChange={(e) => {
+                          const type = e.target.value as any;
+                          setDiscountType(type);
+                          if (type === "NONE") setDiscountValue(0);
+                        }}
                       >
+                        <option value="NONE">No Discount</option>
                         <option value="FLAT">Flat (₹)</option>
                         <option value="PERCENTAGE">% Off</option>
                       </select>
                       <input 
                         type="number" 
                         min="0"
-                        className="flex-1 text-xs px-2 py-1.5 rounded border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800"
-                        placeholder="Discount Value"
+                        className="flex-1 text-xs px-2 py-1.5 rounded border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 disabled:opacity-50 disabled:bg-zinc-100 dark:disabled:bg-zinc-800/50"
+                        placeholder="Value"
                         value={discountValue}
                         onChange={(e) => setDiscountValue(Number(e.target.value))}
+                        disabled={discountType === "NONE"}
                       />
                    </div>
 

@@ -44,7 +44,7 @@ export default function Dashboard({
           to: today.toISOString(),
         };
 
-        const [custRes, matRes, feedRes, ordSum, feedSum, rawSum] =
+        const [custRes, matRes,, ordSum, feedSum, rawSum] =
           await Promise.all([
             api.get("/customers"),
             api.get("/raw-materials"),

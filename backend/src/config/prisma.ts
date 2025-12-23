@@ -15,7 +15,7 @@ const pool =
   new Pool({
     connectionString: process.env.DATABASE_URL,
     ssl: { rejectUnauthorized: false }, // Neon requirement
-    max: 5, // VERY IMPORTANT: limit connections
+    max: 20, // VERY IMPORTANT: limit connections
     idleTimeoutMillis: 10_000,
     connectionTimeoutMillis: 5_000
   });

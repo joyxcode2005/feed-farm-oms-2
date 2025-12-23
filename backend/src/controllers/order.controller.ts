@@ -30,7 +30,7 @@ interface UpdateOrderStatusInput {
 }
 
 /**
- * New: Aggregates order totals and status breakdown for dashboard summaries.
+ * Aggregates order totals and status breakdown for dashboard summaries.
  */
 export async function getOrderSummaryDB(from: Date, to: Date) {
   const totals = await prisma.order.aggregate({
@@ -64,7 +64,9 @@ export async function getOrderSummaryDB(from: Date, to: Date) {
   };
 }
 
-// Route to create an order in db
+/**
+ * Creates an order with bulk stock validation and increased transaction timeouts.
+ */
 export async function createOrderDB(input: CreateOrderInput) {
   const { customerId, adminUserId, items, discountType, discountValue, deliveryDate } = input;
 
@@ -76,16 +78,19 @@ export async function createOrderDB(input: CreateOrderInput) {
     });
 
     if (!customer) {
-      throw new Error("Customer not found!!");
+      throw new Error("CUSTOMER_NOT_FOUND");
     }
 
-    // 2. Validate stock & calculate totals
+    // 2. Optimized Stock Validation: Fetch all required stocks in ONE query
+    const categoryIds = items.map(item => item.feedCategoryId);
+    const availableStocks = await tx.finishedFeedStock.findMany({
+      where: { feedCategoryId: { in: categoryIds } }
+    });
+
     let totalAmount = 0;
 
     for (const item of items) {
-      const stock = await tx.finishedFeedStock.findUnique({
-        where: { feedCategoryId: item.feedCategoryId },
-      });
+      const stock = availableStocks.find(s => s.feedCategoryId === item.feedCategoryId);
 
       if (!stock || stock.quantityAvailable < item.quantityBags) {
         throw new Error("INSUFFICIENT_STOCK");
@@ -99,9 +104,7 @@ export async function createOrderDB(input: CreateOrderInput) {
 
     if (discountType === "FLAT" && discountValue) {
       finalAmount -= discountValue;
-    }
-
-    if (discountType === "PERCENTAGE" && discountValue) {
+    } else if (discountType === "PERCENTAGE" && discountValue) {
       finalAmount -= (totalAmount * discountValue) / 100;
     }
 
@@ -131,6 +134,11 @@ export async function createOrderDB(input: CreateOrderInput) {
         subtotal: item.quantityBags * item.pricePerBag,
       })),
     });
+
+    return order;
+  }, {
+    maxWait: 5000, // Wait up to 5 seconds to acquire a connection
+    timeout: 10000 // Allow up to 10 seconds for the transaction to complete
   });
 }
 
@@ -240,6 +248,9 @@ export async function getOrderByIdDB(input: GetOrderByIdInput) {
   });
 }
 
+/**
+ * Updates order status with bulk stock deduction and transaction timeouts.
+ */
 export async function updateOrderStatusDB(input: UpdateOrderStatusInput) {
   const { orderId, status } = input;
 
@@ -274,18 +285,20 @@ export async function updateOrderStatusDB(input: UpdateOrderStatusInput) {
         throw new Error("INVALID_DISPATCH_STATE");
       }
 
-      // Check stock availability first
-      for (const item of order.items) {
-        const stock = await tx.finishedFeedStock.findUnique({
-          where: { feedCategoryId: item.feedCategoryId },
-        });
+      // Optimized Stock Check: Fetch all in bulk
+      const categoryIds = order.items.map(i => i.feedCategoryId);
+      const stocks = await tx.finishedFeedStock.findMany({
+        where: { feedCategoryId: { in: categoryIds } }
+      });
 
+      for (const item of order.items) {
+        const stock = stocks.find(s => s.feedCategoryId === item.feedCategoryId);
         if (!stock || stock.quantityAvailable < item.quantityBags) {
           throw new Error("INSUFFICIENT_STOCK");
         }
       }
 
-      // Deduct stock + ledger
+      // Deduct stock + ledger entries
       for (const item of order.items) {
         await tx.finishedFeedStock.update({
           where: { feedCategoryId: item.feedCategoryId },
@@ -316,6 +329,9 @@ export async function updateOrderStatusDB(input: UpdateOrderStatusInput) {
         orderStatus: status,
       },
     });
+  }, {
+    maxWait: 5000, //
+    timeout: 10000 //
   });
 }
 
