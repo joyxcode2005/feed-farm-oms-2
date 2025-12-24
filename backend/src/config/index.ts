@@ -22,4 +22,4 @@ export const corsOptions = {
 };
 
 
-export const scheduleTime = "*/5 * * * *"
+export const scheduleTime = "59 23 * * *";

@@ -17,7 +17,7 @@ const pool =
     ssl: { rejectUnauthorized: false }, // Neon requirement
     max: 20, // VERY IMPORTANT: limit connections
     idleTimeoutMillis: 10_000,
-    connectionTimeoutMillis: 5_000
+    connectionTimeoutMillis: 20_000
   });
 
 const adapter = new PrismaPg(pool);

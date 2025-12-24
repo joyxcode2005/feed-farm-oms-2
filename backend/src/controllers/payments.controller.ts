@@ -12,6 +12,7 @@ interface CreatePaymentInput {
 export async function createPaymentDB(input: CreatePaymentInput) {
   const { orderId, amountPaid, paymentMethod, adminUserId, note } = input;
 
+  // Added transaction options to handle serverless database connection times
   return prisma.$transaction(async (tx) => {
     // 1. Fetch order
     const order = await tx.order.findUnique({
@@ -61,6 +62,9 @@ export async function createPaymentDB(input: CreatePaymentInput) {
       payment,
       order: updatedOrder,
     };
+  }, {
+    maxWait: 10000, // Wait up to 10 seconds to acquire a connection from the pool
+    timeout: 20000  // Allow 20 seconds for the transaction logic to complete
   });
 }
 
