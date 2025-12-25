@@ -1,13 +1,15 @@
 "use client";
 
+import { useState } from "react";
+import { api } from "@/src/config";
+import { Plus } from "lucide-react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+
+// Modal Components
 import AdjustmentModal from "@/src/components/AdjustmentModal";
 import CreateRawMaterialModal from "@/src/components/CreateRawMaterialModal";
 import LedgerModal from "@/src/components/LedgerModal";
 import StockActionModal from "@/src/components/StockActionModal";
-import { api } from "@/src/config";
-import { Plus } from "lucide-react";
-import { useEffect, useState } from "react";
-import toast from "react-hot-toast";
 
 interface RawMaterial {
   id: string;
@@ -17,40 +19,33 @@ interface RawMaterial {
 }
 
 export default function RawMaterialsPage() {
-  const [materials, setMaterials] = useState<RawMaterial[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
+  const queryClient = useQueryClient();
+
+  // 1. Fetch Materials with TanStack Query
+  const { data: materials = [], isLoading } = useQuery({
+    queryKey: ["raw-materials"],
+    queryFn: async () => {
+      const res = await api.get("/raw-materials");
+      return res.data.data as RawMaterial[];
+    },
+    staleTime: 1000 * 60 * 5, // Cache for 5 minutes
+  });
 
   // Modal State
   const [isCreating, setIsCreating] = useState(false);
-  const [selectedMaterial, setSelectedMaterial] = useState<RawMaterial | null>(
-    null
-  );
+  const [selectedMaterial, setSelectedMaterial] = useState<RawMaterial | null>(null);
   const [stockAction, setStockAction] = useState<"IN" | "OUT" | null>(null);
-  const [ledgerMaterial, setLedgerMaterial] = useState<RawMaterial | null>(
-    null
-  );
-  const [adjustmentMaterial, setAdjustmentMaterial] =
-    useState<RawMaterial | null>(null);
-
-  const fetchMaterials = async () => {
-    try {
-      const res = await api.get("/raw-materials");
-      setMaterials(res.data.data);
-    } catch (error) {
-      console.error("Failed to fetch raw materials.", error);
-      toast.error("Failed to fetch raw materials.");
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    fetchMaterials();
-  }, []);
+  const [ledgerMaterial, setLedgerMaterial] = useState<RawMaterial | null>(null);
+  const [adjustmentMaterial, setAdjustmentMaterial] = useState<RawMaterial | null>(null);
 
   const openStockModal = (material: RawMaterial, type: "IN" | "OUT") => {
     setSelectedMaterial(material);
     setStockAction(type);
+  };
+
+  // Helper to refresh data
+  const refreshInventory = () => {
+    queryClient.invalidateQueries({ queryKey: ["raw-materials"] });
   };
 
   return (
@@ -97,22 +92,14 @@ export default function RawMaterialsPage() {
               {isLoading ? (
                 [...Array(5)].map((_, i) => (
                   <tr key={i} className="animate-pulse">
-                    <td className="px-6 py-4">
-                      <div className="h-4 w-40 bg-zinc-200 dark:bg-zinc-800 rounded"></div>
-                    </td>
-                    <td className="px-6 py-4">
-                      <div className="h-4 w-16 bg-zinc-200 dark:bg-zinc-800 rounded"></div>
-                    </td>
-                    <td className="px-6 py-4">
-                      <div className="h-4 w-24 bg-zinc-200 dark:bg-zinc-800 rounded"></div>
-                    </td>
-                    <td className="px-6 py-4 flex justify-end gap-2">
-                      <div className="h-8 w-8 bg-zinc-200 dark:bg-zinc-800 rounded"></div>
-                    </td>
+                    <td className="px-6 py-4"><div className="h-4 w-40 bg-zinc-100 dark:bg-zinc-800 rounded" /></td>
+                    <td className="px-6 py-4"><div className="h-4 w-16 bg-zinc-100 dark:bg-zinc-800 rounded" /></td>
+                    <td className="px-6 py-4"><div className="h-4 w-24 bg-zinc-100 dark:bg-zinc-800 rounded" /></td>
+                    <td className="px-6 py-4 flex justify-end gap-2"><div className="h-8 w-8 bg-zinc-100 dark:bg-zinc-800 rounded" /></td>
                   </tr>
                 ))
               ) : materials.length > 0 ? (
-                materials.map((m) => (
+                materials.map((m: RawMaterial) => (
                   <tr
                     key={m.id}
                     className="group hover:bg-zinc-50/50 dark:hover:bg-zinc-800/50 transition-colors"
@@ -129,40 +116,36 @@ export default function RawMaterialsPage() {
                       <div className="flex items-center gap-2">
                         <span
                           className={`text-lg font-semibold ${
-                            m.currentStock < 0
-                              ? "text-red-600"
-                              : "text-zinc-700 dark:text-zinc-300"
+                            m.currentStock < 0 ? "text-red-600" : "text-zinc-700 dark:text-zinc-300"
                           }`}
                         >
                           {m.currentStock.toLocaleString()}
                         </span>
-                        <span className="text-zinc-400 text-xs mt-1">
-                          {m.unit}
-                        </span>
+                        <span className="text-zinc-400 text-xs mt-1">{m.unit}</span>
                       </div>
                     </td>
                     <td className="px-6 py-4 text-right flex justify-end gap-2">
                       <button
                         onClick={() => openStockModal(m, "IN")}
-                        className="px-3 py-1.5 text-xs font-medium text-emerald-700 bg-emerald-50 hover:bg-emerald-100 rounded-md border border-emerald-100"
+                        className="px-3 py-1.5 text-xs font-medium text-emerald-700 bg-emerald-50 hover:bg-emerald-100 rounded-md border border-emerald-100 transition-colors"
                       >
                         Stock In
                       </button>
                       <button
                         onClick={() => openStockModal(m, "OUT")}
-                        className="px-3 py-1.5 text-xs font-medium text-amber-700 bg-amber-50 hover:bg-amber-100 rounded-md border border-amber-100"
+                        className="px-3 py-1.5 text-xs font-medium text-amber-700 bg-amber-50 hover:bg-amber-100 rounded-md border border-amber-100 transition-colors"
                       >
                         Stock Out
                       </button>
                       <button
                         onClick={() => setAdjustmentMaterial(m)}
-                        className="px-3 py-1.5 text-xs font-medium text-violet-700 bg-violet-50 hover:bg-violet-100 rounded-md border border-violet-100"
+                        className="px-3 py-1.5 text-xs font-medium text-violet-700 bg-violet-50 hover:bg-violet-100 rounded-md border border-violet-100 transition-colors"
                       >
                         Adjust
                       </button>
                       <button
                         onClick={() => setLedgerMaterial(m)}
-                        className="px-3 py-1.5 text-xs font-medium text-blue-700 bg-blue-50 hover:bg-blue-100 rounded-md border border-blue-100"
+                        className="px-3 py-1.5 text-xs font-medium text-blue-700 bg-blue-50 hover:bg-blue-100 rounded-md border border-blue-100 transition-colors"
                       >
                         Ledger
                       </button>
@@ -181,16 +164,17 @@ export default function RawMaterialsPage() {
         </div>
       </div>
 
-      {/* Render Modals conditionally */}
+      {/* Conditional Modals with cache invalidation */}
       {isCreating && (
         <CreateRawMaterialModal
           onClose={() => setIsCreating(false)}
           onCreated={() => {
             setIsCreating(false);
-            fetchMaterials();
+            refreshInventory();
           }}
         />
       )}
+
       {selectedMaterial && stockAction && (
         <StockActionModal
           material={selectedMaterial}
@@ -202,23 +186,25 @@ export default function RawMaterialsPage() {
           onSuccess={() => {
             setSelectedMaterial(null);
             setStockAction(null);
-            fetchMaterials();
+            refreshInventory();
           }}
         />
       )}
+
       {ledgerMaterial && (
         <LedgerModal
           material={ledgerMaterial}
           onClose={() => setLedgerMaterial(null)}
         />
       )}
+
       {adjustmentMaterial && (
         <AdjustmentModal
           material={adjustmentMaterial}
           onClose={() => setAdjustmentMaterial(null)}
           onSuccess={() => {
             setAdjustmentMaterial(null);
-            fetchMaterials();
+            refreshInventory();
           }}
         />
       )}

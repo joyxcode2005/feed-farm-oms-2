@@ -1,15 +1,27 @@
 "use client";
 
-import { useAdminAuth } from "@/src/hooks/useAdminAuth";
+import { api, Admin } from "@/src/config";
+import { useQuery } from "@tanstack/react-query";
 import DetailItem from "@/src/helpers/DetailItem";
+import { Loader2 } from "lucide-react";
 
 export default function SettingsPage() {
-  const { admin, loading } = useAdminAuth();
+  // 1. Fetch current admin profile with TanStack Query
+  const { data: admin, isLoading } = useQuery({
+    queryKey: ["admin-me"],
+    queryFn: async () => {
+      const res = await api.get("/auth/info");
+      // Matches the backend structure res.data.admin
+      return res.data.admin as Admin;
+    },
+    // Admin profile data rarely changes, so we keep it fresh for longer
+    staleTime: 1000 * 60 * 30, // 30 minutes
+  });
 
-  if (loading) {
+  if (isLoading) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-zinc-900 dark:border-zinc-100"></div>
+        <Loader2 className="w-8 h-8 animate-spin text-zinc-900 dark:text-zinc-100" />
       </div>
     );
   }
