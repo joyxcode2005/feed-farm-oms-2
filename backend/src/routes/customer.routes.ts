@@ -10,9 +10,9 @@ import {
   getCustomersByDistrict,
   getCustomerSnapshotsDB,
   updateCustomerDB,
+  getAllCustomersFinancialSummaryDB, // Imported new controller function
 } from "../controllers/customer.controller";
 import { createCustomerSchema, updateCustomerSchema } from "../config/types";
-import { float64 } from "zod";
 
 const router = Router();
 
@@ -59,11 +59,9 @@ router.post("/", async (req: Request, res: Response) => {
 
 /**
  * Route to check/get existing customer based on phone number
- * usage: GET /api/v1/admin/customers/phone?phone=9876543210
  */
 router.get("/phone", async (req: Request, res: Response) => {
   try {
-    // Get the phone number from the query parameters
     const { phone } = req.query;
 
     if (!phone || typeof phone !== "string") {
@@ -85,7 +83,7 @@ router.get("/phone", async (req: Request, res: Response) => {
     return res.status(200).json({
       success: true,
       message: "Customer found",
-      data: existingCustomer, // Returning inside 'data' for consistency
+      data: existingCustomer,
     });
   } catch (error) {
     console.error("Check customer failed:", error);
@@ -96,19 +94,33 @@ router.get("/phone", async (req: Request, res: Response) => {
   }
 });
 
-// ... (Rest of the file remains the same: get all, get by id, update, etc.)
+/**
+ * New Route: Get financial summary for all customers
+ * Placed before /:id to prevent conflicts
+ */
+// NEW ROUTE: Get all customer totals
+router.get("/financial-summary", async (req: Request, res: Response) => {
+  try {
+    const summary = await getAllCustomersFinancialSummaryDB();
+    return res.status(200).json({ success: true, data: summary });
+  } catch (error) {
+    return res.status(500).json({ success: false, message: "Internal Server Error" });
+  }
+});
 
+/**
+ * Route to get all customers with filters
+ */
 router.get("/", async (req: Request, res: Response) => {
   try {
     const { district, type } = req.query;
 
-    // Filter by district/type logic...
     if (district && typeof district === "string") {
       const customers = await getCustomersByDistrict(district, type as string);
       return res.status(200).json({
         success: true,
         message: `Customers fetched for ${district}`,
-        customers, // or data: customers
+        data: customers,
       });
     }
 
@@ -160,6 +172,9 @@ router.get("/:id", async (req: Request, res: Response) => {
   }
 });
 
+/**
+ * Route to get total due for a specific customer
+ */
 router.get("/:id/total-due", async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
@@ -172,28 +187,23 @@ router.get("/:id/total-due", async (req: Request, res: Response) => {
       });
     }
 
-    // Variable to store total due
-    let totalDue = 0.0;
+    const totalDue = customer.orders.reduce((sum, order) => sum + order.dueAmount, 0);
 
-    for (const order of customer.orders) {
-      totalDue += order.dueAmount;
-    }
-
-    if (!totalDue)
-      return res.status(201).json({
+    if (totalDue === 0) {
+      return res.status(200).json({
         success: true,
-        message: "Customer has no due amount to pay!!!",
-        totalDue: 0.0,
+        message: "Customer has no due amount to pay",
+        customerTotalDue: 0.0,
       });
+    }
 
     return res.status(200).json({
       success: true,
-      message: "Customer due amount fetched successfully!!!",
+      message: "Customer due amount fetched successfully",
       customerTotalDue: totalDue,
     });
-    
   } catch (error) {
-    console.error("Fetching customer failed:", error);
+    console.error("Fetching customer due failed:", error);
     return res.status(500).json({
       success: false,
       message: "Internal Server Error!!",
@@ -227,9 +237,7 @@ router.put("/:id", async (req: Request, res: Response) => {
       });
     } catch (err: any) {
       if (err.code === "P2002")
-        return res
-          .status(409)
-          .json({ success: false, message: "Customer with this phone already exists" });
+        return res.status(409).json({ success: false, message: "Customer with this phone already exists" });
       if (err.code === "P2025")
         return res.status(404).json({ success: false, message: "Customer not found" });
       throw err;

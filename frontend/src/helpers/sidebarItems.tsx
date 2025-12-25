@@ -50,8 +50,8 @@ export const sidebarItems: SidebarItem[] = [
     icon: <UserCircle size={18} />,
   },
   {
-    key: "Payments",
-    label: "Payments",
+    key: "Payments", 
+    label: "Customer Ledger", // Changed from "Payments"
     href: "/dashboard/payments",
     icon: <CircleDollarSign size={18} />,
   },

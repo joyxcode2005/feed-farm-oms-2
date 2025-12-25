@@ -184,7 +184,7 @@ export default function LedgerModal({ material, onClose }: Props) {
             </tbody>
           </table>
         </div>
-      </div>
+      </div> 
     </div>
   );
 }
