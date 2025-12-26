@@ -1,4 +1,4 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
+ /* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
 import React, { useRef } from "react";
@@ -22,7 +22,7 @@ import toast from "react-hot-toast";
 import { useReactToPrint } from "react-to-print";
 import { CustomerBill } from "@/src/components/CustomerBill";
 
-// Define shapes
+// --- Types ---
 interface CustomerProfile {
   id: string;
   name: string;
@@ -70,10 +70,10 @@ export default function CustomerDetailPage({
   const queryClient = useQueryClient();
   const contentRef = useRef<HTMLDivElement>(null);
 
-  // TanStack Query with Instant Header Optimization
   const { data, isError, isLoading } = useQuery<DetailData>({
     queryKey: ["customer", customerId],
     queryFn: async () => {
+      // Calling both endpoints concurrently
       const [profileRes, ledgerRes] = await Promise.all([
         api.get(`/customers/${customerId}`),
         api.get(`/customers/${customerId}/ledger`),
@@ -84,8 +84,12 @@ export default function CustomerDetailPage({
         ledger: (ledgerRes.data.data || ledgerRes.data) as LedgerData,
       };
     },
-    // INITIAL DATA: Look into the 'all customers' cache to show basic info instantly
-    initialData: () => {
+    /**
+     * Using placeholderData instead of initialData.
+     * This allows us to show the basic info from the list view while
+     * FORCING a background fetch for the full profile and ledger immediately.
+     */
+    placeholderData: () => {
       const allCustomers = queryClient.getQueryData<any[]>(["customers"]);
       const cached = allCustomers?.find((c) => c.id === customerId);
 
@@ -99,12 +103,12 @@ export default function CustomerDetailPage({
             address: cached.address || null,
             district: cached.district || "",
           },
-          ledger: null, // Ledger is not available in the list cache
+          ledger: null, 
         };
       }
       return undefined;
     },
-    staleTime: 1000 * 60 * 5,
+    staleTime: 1000 * 60 * 5, // Data is fresh for 5 minutes
     enabled: !!customerId,
   });
 
@@ -126,7 +130,7 @@ export default function CustomerDetailPage({
     setTimeout(() => reactToPrintFn(), 100);
   };
 
-  // Only show a full-page loader if we don't even have cached basic info
+  // Only show full loader if we have NO data (not even placeholder)
   if (isLoading && !customer) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
@@ -137,7 +141,7 @@ export default function CustomerDetailPage({
 
   if (isError || !customer) {
     return (
-      <div className="p-8 text-center">
+      <div className="p-8 text-center text-zinc-500">
         Customer not found or failed to load.
       </div>
     );
@@ -145,10 +149,11 @@ export default function CustomerDetailPage({
 
   return (
     <div className="space-y-6 max-w-6xl mx-auto p-4 sm:p-6">
+      {/* Header Actions */}
       <div className="flex items-center justify-between">
         <button
           onClick={() => router.push("/dashboard/customers")}
-          className="flex items-center gap-2 text-zinc-500 hover:text-zinc-900 transition-colors group mb-2"
+          className="flex items-center gap-2 text-zinc-500 hover:text-zinc-900 transition-colors group"
         >
           <ArrowLeft className="w-4 h-4 group-hover:-translate-x-1 transition-transform" />
           Back to Customers
@@ -164,15 +169,15 @@ export default function CustomerDetailPage({
         </button>
       </div>
 
-      {/* Profile Header - Shows instantly if found in cache */}
+      {/* Profile Card */}
       <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl p-6 shadow-sm">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
           <div className="flex items-start gap-4">
             <div
               className={`p-4 rounded-full ${
                 customer.type === "DISTRIBUTER"
-                  ? "bg-purple-100 text-purple-600"
-                  : "bg-blue-100 text-blue-600"
+                  ? "bg-purple-100 text-purple-600 dark:bg-purple-900/30"
+                  : "bg-blue-100 text-blue-600 dark:bg-blue-900/30"
               }`}
             >
               {customer.type === "DISTRIBUTER" ? (
@@ -215,7 +220,7 @@ export default function CustomerDetailPage({
       </div>
 
       {!ledger ? (
-        /* Partial loading state for financials only */
+        /* Financial Skeleton - Shows while ledger route is fetching */
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           {[...Array(3)].map((_, i) => (
             <div
@@ -226,6 +231,7 @@ export default function CustomerDetailPage({
         </div>
       ) : (
         <>
+          {/* Summary Stats */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className="p-6 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl shadow-sm">
               <p className="text-sm font-medium text-zinc-500 flex items-center gap-2">
@@ -253,6 +259,7 @@ export default function CustomerDetailPage({
             </div>
           </div>
 
+          {/* Ledger Table */}
           <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl overflow-hidden shadow-sm">
             <div className="px-6 py-4 border-b border-zinc-200 dark:border-zinc-800">
               <h3 className="font-bold text-zinc-900 dark:text-zinc-100">
@@ -300,6 +307,7 @@ export default function CustomerDetailPage({
             </div>
           </div>
 
+          {/* Hidden Print Component */}
           <div className="hidden">
             <CustomerBill
               ref={contentRef}
