@@ -1,45 +1,26 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-
 "use client";
 
 import { useState, useRef } from "react";
-import { api } from "@/src/config";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import toast from "react-hot-toast";
 import { Plus, Search, Banknote, Printer, Loader2 } from "lucide-react";
+import { useReactToPrint } from "react-to-print";
+
+// Modular Imports
+import { OrderService } from "@/src/services/order.service";
+import { Order, OrderStatus } from "@/src/types";
+import { StatusBadge } from "@/src/components/ui/StatusBadge";
+
+// Sub-components
 import CreateOrderModal from "@/src/components/CreateOrderModal";
 import CreatePaymentModal from "@/src/components/CreatePaymentModal";
-import { useReactToPrint } from "react-to-print";
 import { OrderBill } from "@/src/components/OrderBill";
 
-interface Order {
-  id: string;
-  orderStatus: string;
-  totalAmount: number;
-  finalAmount: number;
-  paidAmount: number;
-  dueAmount: number;
-  deliveryDate: string;
-  createdAt: string;
-  customer: {
-    name: string;
-    phone: string;
-    address?: string;
-  };
-  items: {
-    id: string;
-    quantityBags: number;
-    subtotal: number;
-    feedCategory: {
-      name: string;
-    };
-  }[];
-}
-
-export default function Orders() {
+export default function OrdersPage() {
   const queryClient = useQueryClient();
   const [search, setSearch] = useState("");
-  const [statusFilter, setStatusFilter] = useState("");
+  const [statusFilter, setStatusFilter] = useState<string>("");
 
   // Modal & Print States
   const [isCreating, setIsCreating] = useState(false);
@@ -48,23 +29,20 @@ export default function Orders() {
 
   const contentRef = useRef<HTMLDivElement>(null);
 
-  // 1. Fetch Orders with caching
+  // 1. Fetch Orders via Service
   const { data: orders = [], isLoading } = useQuery({
     queryKey: ["orders"],
-    queryFn: async () => {
-      const res = await api.get("/orders");
-      return res.data.data as Order[];
-    },
+    queryFn: OrderService.getAll,
     staleTime: 1000 * 60 * 5, // 5 minutes cache
   });
 
-  // 2. Mutation for Status Updates
+  // 2. Mutation for Status Updates via Service
   const statusMutation = useMutation({
     mutationFn: async ({ id, status }: { id: string; status: string }) => {
-      await api.put(`/orders/${id}/status`, { status });
+      await OrderService.updateStatus(id, status);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["orders"] }); // Refresh list
+      queryClient.invalidateQueries({ queryKey: ["orders"] });
       toast.success("Status updated");
     },
     onError: (error: any) => {
@@ -90,25 +68,9 @@ export default function Orders() {
         order.id.includes(search))
   );
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case "PENDING":
-        return "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400";
-      case "CONFIRMED":
-        return "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400";
-      case "DISPATCHED":
-        return "bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400";
-      case "DELIVERED":
-        return "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400";
-      case "CANCELED":
-        return "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400";
-      default:
-        return "bg-zinc-100 text-zinc-700";
-    }
-  };
-
   return (
     <div className="space-y-6">
+      {/* Header Section */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h2 className="text-2xl font-bold tracking-tight text-zinc-900 dark:text-zinc-100">
@@ -126,7 +88,7 @@ export default function Orders() {
         </button>
       </div>
 
-      {/* Filters */}
+      {/* Filters Section */}
       <div className="flex flex-col sm:flex-row gap-3">
         <div className="relative flex-1 max-w-sm">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400" />
@@ -152,7 +114,7 @@ export default function Orders() {
         </select>
       </div>
 
-      {/* Orders List */}
+      {/* Orders Table */}
       <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl shadow-sm overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-sm text-left">
@@ -199,16 +161,14 @@ export default function Orders() {
                         {new Date(order.createdAt).toLocaleDateString()}
                       </td>
                       <td className="px-6 py-4">
-                        <div className="relative inline-block">
+                        <div className="flex items-center gap-2">
                           {statusMutation.isPending &&
                             statusMutation.variables?.id === order.id && (
-                              <Loader2 className="absolute -left-6 top-1/2 -translate-y-1/2 w-3.5 h-3.5 animate-spin text-zinc-400" />
+                              <Loader2 className="w-3.5 h-3.5 animate-spin text-zinc-400" />
                             )}
                           <select
                             disabled={statusMutation.isPending}
-                            className={`px-2 py-1 rounded text-xs font-semibold border-none outline-none cursor-pointer disabled:opacity-50 ${getStatusColor(
-                              order.orderStatus
-                            )}`}
+                            className="px-2 py-1 rounded text-xs font-semibold bg-transparent border-none outline-none cursor-pointer disabled:opacity-50"
                             value={order.orderStatus}
                             onChange={(e) =>
                               statusMutation.mutate({
@@ -217,12 +177,21 @@ export default function Orders() {
                               })
                             }
                           >
-                            <option value="PENDING">PENDING</option>
-                            <option value="CONFIRMED">CONFIRMED</option>
-                            <option value="DISPATCHED">DISPATCHED</option>
-                            <option value="DELIVERED">DELIVERED</option>
-                            <option value="CANCELED">CANCELED</option>
+                            {[
+                              "PENDING",
+                              "CONFIRMED",
+                              "DISPATCHED",
+                              "DELIVERED",
+                              "CANCELED",
+                            ].map((s) => (
+                              <option key={s} value={s}>
+                                {s}
+                              </option>
+                            ))}
                           </select>
+                          <StatusBadge
+                            status={order.orderStatus as OrderStatus}
+                          />
                         </div>
                       </td>
                       <td className="px-6 py-4">
@@ -245,7 +214,7 @@ export default function Orders() {
                         <div className="flex items-center justify-end gap-2">
                           <button
                             onClick={() => handlePrint(order)}
-                            className="inline-flex items-center gap-1 px-3 py-1.5 bg-zinc-50 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-700 rounded-md text-xs font-medium transition-colors border border-zinc-200 dark:border-zinc-700"
+                            className="inline-flex items-center gap-1 px-3 py-1.5 bg-zinc-50 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-700 rounded-md text-xs font-medium border border-zinc-200 dark:border-zinc-700"
                             title="Print Bill"
                           >
                             <Printer className="w-3.5 h-3.5" />
@@ -255,7 +224,7 @@ export default function Orders() {
                             order.orderStatus !== "CANCELED" && (
                               <button
                                 onClick={() => setPaymentOrder(order)}
-                                className="inline-flex items-center gap-1 px-3 py-1.5 bg-green-50 text-green-700 hover:bg-green-100 rounded-md text-xs font-medium transition-colors"
+                                className="inline-flex items-center gap-1 px-3 py-1.5 bg-green-50 text-green-700 hover:bg-green-100 rounded-md text-xs font-medium"
                               >
                                 <Banknote className="w-3 h-3" /> Pay
                               </button>
@@ -269,12 +238,12 @@ export default function Orders() {
         </div>
       </div>
 
-      {/* Hidden Component for Printing */}
+      {/* Print Overlay */}
       <div className="hidden">
         <OrderBill ref={contentRef} order={printOrder} />
       </div>
 
-      {/* Modals with Cache Invalidation */}
+      {/* Modals */}
       {isCreating && (
         <CreateOrderModal
           onClose={() => setIsCreating(false)}
