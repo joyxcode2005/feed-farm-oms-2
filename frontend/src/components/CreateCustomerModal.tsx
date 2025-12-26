@@ -5,6 +5,7 @@ import { useState } from "react";
 import { api } from "@/src/config";
 import toast from "react-hot-toast";
 import { X, Loader2 } from "lucide-react";
+import { WEST_BENGAL_DISTRICTS } from "../constants/districts";
 
 interface Props {
   onClose: () => void;
@@ -23,6 +24,7 @@ export default function CreateCustomerModal({ onClose, onCreated }: Props) {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!formData.district) return toast.error("Please select a district");
     setLoading(true);
 
     try {
@@ -94,12 +96,17 @@ export default function CreateCustomerModal({ onClose, onCreated }: Props) {
               <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1">
                 District
               </label>
-              <input
+              <select
+                required
                 className="w-full px-3 py-2 rounded-lg border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800"
                 value={formData.district}
                 onChange={(e) => setFormData({ ...formData, district: e.target.value })}
-                placeholder="e.g. North 24 Parganas"
-              />
+              >
+                <option value="">Select District</option>
+                {WEST_BENGAL_DISTRICTS.map((d) => (
+                  <option key={d} value={d}>{d}</option>
+                ))}
+              </select>
             </div>
           </div>
 

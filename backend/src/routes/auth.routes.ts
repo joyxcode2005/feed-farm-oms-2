@@ -15,12 +15,14 @@ const router = Router();
 
 const JWT_SECRET = process.env.JWT_SECRET || "";
 
+/**
+ * PUBLIC ROUTES
+ */
+
 // Route for admin login
 router.post("/login", async (req: Request, res: Response) => {
-  // Safely parse the body data using zod schema
   const { success, error, data } = adminLoginSchema.safeParse(req.body);
 
-  // Return proper error msg if input data is incorrect
   if (!success) {
     return res.status(401).json({
       success: false,
@@ -30,21 +32,15 @@ router.post("/login", async (req: Request, res: Response) => {
   }
 
   try {
-    // Destructure the data from zod data
     const { email, password } = data;
-
-    // Check if admin user already exists
     const existingAdminuser = await findAdminUser(email);
 
-    // Send appropirate msg if the admin is not registerd
     if (!existingAdminuser)
       return res.status(404).json({
         success: false,
-        message:
-          "Admin User is not registered!!! Contact the developer to get registered as an admin!!",
+        message: "Admin User is not registered!!! Contact the developer to get registered as an admin!!",
       });
 
-    // Check if the password is correct or not
     const comparePassword = await bcrypt.compare(password, existingAdminuser.passwordHash);
 
     if (!comparePassword)
@@ -53,29 +49,24 @@ router.post("/login", async (req: Request, res: Response) => {
         message: "Invalid Credentials!! Either email or password is incorrect!!",
       });
 
-    // Create a signed token for the
     const admin_token = jwt.sign(
-      {
-        id: existingAdminuser.id,
-      },
+      { id: existingAdminuser.id },
       JWT_SECRET,
-      {
-        expiresIn: "1d",
-      },
+      { expiresIn: "1d" }
     );
 
     if (!admin_token)
       return res.status(400).json({
         success: false,
-        message: "Vaild to generate authentication token!! Please login again!!",
+        message: "Failed to generate authentication token!! Please login again!!",
       });
 
     res.cookie("admin_token", admin_token, {
-      httpOnly: true, // prevents JS access (XSS protection)
-      secure: process.env.NODE_ENV === "production", // true over HTTPS
-      sameSite: "strict", // prevents CSRF via cross-site requests
-      maxAge: 24 * 60 * 60 * 1000, // 1 day in ms
-      path: "/", // cookie is valid for the entire site
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "strict",
+      maxAge: 24 * 60 * 60 * 1000, // 1 day
+      path: "/",
     });
 
     return res.status(200).json({
@@ -90,7 +81,7 @@ router.post("/login", async (req: Request, res: Response) => {
   }
 });
 
-// Route to remove the cookie and logout the admin
+// Route to logout
 router.post("/logout", (req: Request, res: Response) => {
   res.clearCookie("admin_token", {
     httpOnly: true,
@@ -99,100 +90,62 @@ router.post("/logout", (req: Request, res: Response) => {
     secure: process.env.NODE_ENV === "production",
   });
 
-  return res.status(200).json({ success: true, message: "Admin Logged Out Sucessfully!" });
+  return res.status(200).json({ success: true, message: "Admin Logged Out Successfully!" });
 });
 
+/**
+ * PROTECTED ROUTES (Requires adminUserMiddleware)
+ */
 router.use(adminUserMiddleware);
 
-// Get admin user details
+// Get logged-in admin details
 router.get("/info", async (req: Request, res: Response) => {
   try {
-    // Get admin id of logged in user
     const adminId = (req as any).adminId;
+    if (!adminId) return res.status(401).json({ success: false, message: "Unauthorized!!" });
 
-    if (!adminId)
-      return res.status(401).json({
-        success: false,
-        message: "Unauthorized!!",
-      });
-
-    // Get the admin info of the logged in user
     const adminInfo = await findAdminUser(adminId);
+    if (!adminInfo) return res.status(404).json({ success: false, message: "Admin User Not found!!" });
 
-    if (!adminInfo)
-      return res.status(404).json({
-        success: false,
-        message: "Admin User Not found!!",
-      });
-
-    return res.status(201).json({
+    return res.status(200).json({
       success: true,
       message: "Admin User Data found!!",
       admin: adminInfo,
     });
   } catch (error) {
-    return res.status(500).json({
-      success: false,
-      message: "Internal Server Error!!",
-    });
+    return res.status(500).json({ success: false, message: "Internal Server Error!!" });
   }
 });
 
-// Route to update the admin data
+// Update OWN data (the logged-in admin)
 router.put("/update", async (req: Request, res: Response) => {
   try {
-    // Get the admin id
     const adminId = (req as any).adminId;
-    // Properly parse the data
     const { success, error, data } = adminUpdateSchema.safeParse(req.body);
 
-    if (!success)
-      return res.status(401).json({
-        success: false,
-        message: "Invalid Input!!",
-        error: error.message,
-      });
+    if (!success) return res.status(401).json({ success: false, message: "Invalid Input!!", error: error.message });
 
-    // Destructure the data
     const { name, phone, email } = data;
-
-    // Update the admin user details and get the data
     const updatedAdminData = await updateAdminUserData(adminId, name, email, phone);
 
-    // Check if failed to update admin
-    if (!updatedAdminData)
-      return res.status(402).json({
-        success: false,
-        message: "Failed to update admin details!! try again!!",
-      });
+    if (!updatedAdminData) return res.status(402).json({ success: false, message: "Failed to update admin details!!" });
 
-    // Return data for updated admin
     return res.status(200).json({
       success: true,
-      message: "Admin data updated successfully!!",
+      message: "Profile updated successfully!!",
       updatedAdminData,
     });
   } catch (error) {
-    // Return correct status code for unexpected error!!
-    return res.status(500).json({
-      success: false,
-      message: "Internal Server Error!!",
-    });
+    return res.status(500).json({ success: false, message: "Internal Server Error!!" });
   }
 });
 
-// Route to get all admins
+// Route to get all admins (Except self)
 router.get("/all", async (req: Request, res: Response) => {
   const adminId = (req as any).adminId;
   try {
-    // Fetch all admin users data
     const adminUsers = await getAllAdminUsers(adminId);
-
-    if (!adminUsers)
-      return res.status(404).json({
-        success: false,
-        message: "No admin users found!!",
-      });
+    if (!adminUsers) return res.status(404).json({ success: false, message: "No admin users found!!" });
 
     return res.status(200).json({
       success: true,
@@ -200,40 +153,63 @@ router.get("/all", async (req: Request, res: Response) => {
       adminUsers,
     });
   } catch (error) {
-    return res.status(500).json({
-      success: false,
-      message: "Internal Server Error!!",
-    });
+    return res.status(500).json({ success: false, message: "Internal Server Error!!" });
   }
 });
 
-// Route to delete an admin (Only a SUPER_ADMIN can delete an ADMIN)
+/**
+ * SUPER_ADMIN ONLY ROUTES
+ */
+
+// Route to update ANOTHER admin's details (Required for EditModal connection)
+router.put("/update-admin/:id", async (req: Request, res: Response) => {
+  try {
+    const adminId = (req as any).adminId;
+    const targetId = req.params.id;
+
+    // 1. Verify requester is a SUPER_ADMIN
+    const loggedInAdmin = await findAdminUser(adminId);
+    if (loggedInAdmin?.role !== "SUPER_ADMIN") {
+      return res.status(401).json({ success: false, message: "Unauthorized!! Only Super Admins can perform this action." });
+    }
+
+    // 2. Parse input data
+    const { success, error, data } = adminUpdateSchema.safeParse(req.body);
+    if (!success) return res.status(400).json({ success: false, message: "Invalid Input!!", error: error.message });
+
+    const { name, email, phone } = data;
+
+    // 3. Perform update on the target admin ID
+    const updatedAdminData = await updateAdminUserData(targetId, name, email, phone);
+
+    if (!updatedAdminData) {
+      return res.status(404).json({ success: false, message: "Target Admin user not found!!" });
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: "Admin updated successfully!!",
+      updatedAdminData,
+    });
+  } catch (error) {
+    return res.status(500).json({ success: false, message: "Internal Server Error!!" });
+  }
+});
+
+// Delete an admin (Only SUPER_ADMIN can delete an ADMIN)
 router.delete("/delete/:id", async (req: Request, res: Response) => {
-  // Get the id from the request params
   const id = req.params.id;
-  // Get the id of the logged in admin
   const adminId = (req as any).adminId;
 
-  // Check if the id's exists!!
-  if (!id || !adminId)
-    return res.status(404).json({
-      success: false,
-      message: "No admin found to delete!! or Unauthorized!!",
-    });
+  if (!id || !adminId) return res.status(404).json({ success: false, message: "Missing ID or Unauthorized!!" });
 
-  // Check if the logged in admin is a SUPER_ADMIN
   const existingAdmin = await findAdminUser(adminId);
   const existingAdminToDelete = await findAdminUser(id);
 
   if (existingAdmin?.role === "SUPER_ADMIN" && existingAdminToDelete?.role === "ADMIN") {
     try {
       const deletedAdminUser = await deleteAdminUser(id);
-
-      if (!deletedAdminUser)
-        return res.status(400).json({
-          success: false,
-          message: "Failed to delete Admin User!!",
-        });
+      if (!deletedAdminUser) return res.status(400).json({ success: false, message: "Failed to delete Admin User!!" });
 
       return res.status(200).json({
         success: true,
@@ -241,77 +217,36 @@ router.delete("/delete/:id", async (req: Request, res: Response) => {
         deletedAdminUser,
       });
     } catch (error) {
-      return res.status(500).json({
-        success: false,
-        message: "Internal Server Error!!!",
-      });
+      return res.status(500).json({ success: false, message: "Internal Server Error!!!" });
     }
   } else {
-    return res.status(401).json({
-      success: false,
-      message: "Unauthorized!!",
-    });
+    return res.status(401).json({ success: false, message: "Unauthorized!! Cannot delete a Super Admin or self." });
   }
 });
 
-// An super admin can create an normal admin user
+// Create new admin (Only SUPER_ADMIN)
 router.post("/create-admin", async (req: Request, res: Response) => {
   try {
-    // Parse the request body properly using zod schema
     const { success, error, data } = createNewAdminSchema.safeParse(req.body);
     const adminId = (req as any).adminId;
 
-    if (!success)
-      return res.status(401).json({
-        success: false,
-        message: "Invalid Input!!",
-        error: error.flatten(),
-      });
+    if (!success) return res.status(401).json({ success: false, message: "Invalid Input!!", error: error.flatten() });
 
-    // Fetch the deatails of the logged in admin user
     const loggedInAdminUser = await findAdminUser(adminId);
+    if (!loggedInAdminUser || loggedInAdminUser.role !== "SUPER_ADMIN") {
+      return res.status(401).json({ success: false, message: "Unauthorized!!" });
+    }
 
-    if (!loggedInAdminUser)
-      return res.status(404).json({
-        success: false,
-        message: "Error fetching details!!!",
-      });
-
-    if (loggedInAdminUser.role !== "SUPER_ADMIN")
-      return res.status(401).json({
-        success: false,
-        message: "Unauthorized!!",
-      });
-
-    // Destructure required data
     const { name, email, phone, password } = data;
 
-    // Check if the admin user with same phone already exists!!
+    // Check uniqueness (you can add email check here as well)
     const existingAdminUserWithSamePhone = await findAdminUser(phone);
+    if (existingAdminUserWithSamePhone) return res.status(401).json({ success: false, message: "Admin user with the same phone already exists!!" });
 
-    if (existingAdminUserWithSamePhone)
-      return res.status(401).json({
-        success: false,
-        message: "Admin user with the same phone already exists!!",
-      });
-
-    // Hash the password
     const hashedPassword = await bcrypt.hash(password, 10);
-
-    if (!hashedPassword)
-      return res.status(402).json({
-        success: false,
-        message: "Failed to hash the password!!",
-      });
-
-    // Create new admin user
     const newAdminUser = await createNewAdminUser(name, email, phone, hashedPassword, "ADMIN");
 
-    if (!newAdminUser)
-      return res.status(402).json({
-        success: false,
-        message: "Faild to create admin user!!",
-      });
+    if (!newAdminUser) return res.status(402).json({ success: false, message: "Failed to create admin user!!" });
 
     return res.status(202).json({
       success: true,
@@ -319,12 +254,8 @@ router.post("/create-admin", async (req: Request, res: Response) => {
       newAdminUser,
     });
   } catch (error) {
-    return res.status(500).json({
-      success: false,
-      message: "Internal Server Error!!",
-    });
+    return res.status(500).json({ success: false, message: "Internal Server Error!!" });
   }
 });
-
 
 export default router;

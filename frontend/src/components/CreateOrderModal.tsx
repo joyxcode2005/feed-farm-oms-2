@@ -7,6 +7,7 @@ import { api } from "@/src/config";
 import toast from "react-hot-toast";
 import { X, Plus, Trash2, Loader2, Calendar, Filter, User, CheckCircle2, AlertCircle } from "lucide-react";
 import debounce from "lodash/debounce";
+import { WEST_BENGAL_DISTRICTS } from "../constants/districts";
 
 interface CreateOrderModalProps {
   onClose: () => void;
@@ -286,17 +287,20 @@ export default function CreateOrderModal({ onClose, onCreated }: CreateOrderModa
 
               <div className={`col-span-full grid grid-cols-1 md:grid-cols-2 gap-5 transition-all duration-300 ${isNewCustomer || selectedCustomerId ? 'opacity-100 max-h-96' : 'opacity-0 max-h-0 hidden'}`}>
                  <div>
-                    <label className="block text-xs font-medium text-zinc-500 mb-1">District</label>
-                    <input 
-                      type="text"
-                      className="w-full px-3 py-2 rounded-lg border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 disabled:bg-zinc-100 disabled:text-zinc-500"
-                      value={customerDistrict}
-                      onChange={(e) => setCustomerDistrict(e.target.value)}
-                      disabled={!!selectedCustomerId}
-                      required={isNewCustomer}
-                      placeholder="District"
-                    />
-                 </div>
+    <label className="block text-xs font-medium text-zinc-500 mb-1">District</label>
+    <select 
+        className="w-full px-3 py-2 rounded-lg border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 disabled:bg-zinc-100 disabled:text-zinc-500"
+        value={customerDistrict}
+        onChange={(e) => setCustomerDistrict(e.target.value)}
+        disabled={!!selectedCustomerId}
+        required={isNewCustomer}
+    >
+        <option value="">Select District</option>
+        {WEST_BENGAL_DISTRICTS.map((d) => (
+            <option key={d} value={d}>{d}</option>
+        ))}
+    </select>
+</div>
                  <div>
                     <label className="block text-xs font-medium text-zinc-500 mb-1">Customer Type</label>
                     <select 

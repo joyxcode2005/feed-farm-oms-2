@@ -1,7 +1,7 @@
  /* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
-import React, { useRef } from "react";
+import React, { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { api } from "@/src/config";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -17,10 +17,12 @@ import {
   Building,
   Printer,
   Loader2,
+  Edit2,
 } from "lucide-react";
 import toast from "react-hot-toast";
 import { useReactToPrint } from "react-to-print";
 import { CustomerBill } from "@/src/components/CustomerBill";
+import CustomerEditModal from "@/src/components/CustomerEditModal";
 
 // --- Types ---
 interface CustomerProfile {
@@ -69,11 +71,11 @@ export default function CustomerDetailPage({
   const router = useRouter();
   const queryClient = useQueryClient();
   const contentRef = useRef<HTMLDivElement>(null);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false); // State for modal
 
   const { data, isError, isLoading } = useQuery<DetailData>({
     queryKey: ["customer", customerId],
     queryFn: async () => {
-      // Calling both endpoints concurrently
       const [profileRes, ledgerRes] = await Promise.all([
         api.get(`/customers/${customerId}`),
         api.get(`/customers/${customerId}/ledger`),
@@ -84,11 +86,6 @@ export default function CustomerDetailPage({
         ledger: (ledgerRes.data.data || ledgerRes.data) as LedgerData,
       };
     },
-    /**
-     * Using placeholderData instead of initialData.
-     * This allows us to show the basic info from the list view while
-     * FORCING a background fetch for the full profile and ledger immediately.
-     */
     placeholderData: () => {
       const allCustomers = queryClient.getQueryData<any[]>(["customers"]);
       const cached = allCustomers?.find((c) => c.id === customerId);
@@ -108,18 +105,20 @@ export default function CustomerDetailPage({
       }
       return undefined;
     },
-    staleTime: 1000 * 60 * 5, // Data is fresh for 5 minutes
+    staleTime: 1000 * 60 * 5,
     enabled: !!customerId,
   });
 
   const customer = data?.customer;
   const ledger = data?.ledger;
 
+  const handleUpdateSuccess = () => {
+    queryClient.invalidateQueries({ queryKey: ["customer", customerId] });
+  };
+
   const reactToPrintFn = useReactToPrint({
     contentRef,
-    documentTitle: `Customer_Statement_${
-      customer?.name
-    }_${new Date().toLocaleDateString()}`,
+    documentTitle: `Customer_Statement_${customer?.name}_${new Date().toLocaleDateString()}`,
   });
 
   const handlePrint = () => {
@@ -130,7 +129,6 @@ export default function CustomerDetailPage({
     setTimeout(() => reactToPrintFn(), 100);
   };
 
-  // Only show full loader if we have NO data (not even placeholder)
   if (isLoading && !customer) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
@@ -141,9 +139,7 @@ export default function CustomerDetailPage({
 
   if (isError || !customer) {
     return (
-      <div className="p-8 text-center text-zinc-500">
-        Customer not found or failed to load.
-      </div>
+      <div className="p-8 text-center text-zinc-500">Customer not found or failed to load.</div>
     );
   }
 
@@ -159,14 +155,25 @@ export default function CustomerDetailPage({
           Back to Customers
         </button>
 
-        <button
-          onClick={handlePrint}
-          disabled={!ledger}
-          className="flex items-center gap-2 px-4 py-2 bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900 text-sm font-medium rounded-lg hover:opacity-90 disabled:opacity-50 transition-all shadow-sm"
-        >
-          <Printer className="w-4 h-4" />
-          Print Statement
-        </button>
+        <div className="flex gap-3">
+          {/* New Update Button */}
+          <button
+            onClick={() => setIsEditModalOpen(true)}
+            className="flex items-center gap-2 px-4 py-2 bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 text-sm font-medium rounded-lg hover:bg-zinc-50 dark:hover:bg-zinc-700 transition-all shadow-sm"
+          >
+            <Edit2 className="w-4 h-4 text-zinc-500" />
+            Update Details
+          </button>
+
+          <button
+            onClick={handlePrint}
+            disabled={!ledger}
+            className="flex items-center gap-2 px-4 py-2 bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900 text-sm font-medium rounded-lg hover:opacity-90 disabled:opacity-50 transition-all shadow-sm"
+          >
+            <Printer className="w-4 h-4" />
+            Print Statement
+          </button>
+        </div>
       </div>
 
       {/* Profile Card */}
@@ -220,13 +227,9 @@ export default function CustomerDetailPage({
       </div>
 
       {!ledger ? (
-        /* Financial Skeleton - Shows while ledger route is fetching */
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           {[...Array(3)].map((_, i) => (
-            <div
-              key={i}
-              className="h-28 bg-zinc-100 dark:bg-zinc-800 rounded-xl animate-pulse"
-            />
+            <div key={i} className="h-28 bg-zinc-100 dark:bg-zinc-800 rounded-xl animate-pulse" />
           ))}
         </div>
       ) : (
@@ -262,9 +265,7 @@ export default function CustomerDetailPage({
           {/* Ledger Table */}
           <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl overflow-hidden shadow-sm">
             <div className="px-6 py-4 border-b border-zinc-200 dark:border-zinc-800">
-              <h3 className="font-bold text-zinc-900 dark:text-zinc-100">
-                Order Dues History
-              </h3>
+              <h3 className="font-bold text-zinc-900 dark:text-zinc-100">Order Dues History</h3>
             </div>
             <div className="overflow-x-auto">
               <table className="w-full text-left">
@@ -273,33 +274,20 @@ export default function CustomerDetailPage({
                     <th className="px-6 py-4">Date</th>
                     <th className="px-6 py-4">Order ID</th>
                     <th className="px-6 py-4 text-right">Amount</th>
-                    <th className="px-6 py-4 text-right text-green-600">
-                      Paid
-                    </th>
+                    <th className="px-6 py-4 text-right text-green-600">Paid</th>
                     <th className="px-6 py-4 text-right text-red-600">Due</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-zinc-100 dark:divide-zinc-800">
                   {ledger.orders.map((order) => (
-                    <tr
-                      key={order.id}
-                      className="hover:bg-zinc-50/50 dark:hover:bg-zinc-800/30 transition-colors"
-                    >
+                    <tr key={order.id} className="hover:bg-zinc-50/50 dark:hover:bg-zinc-800/30 transition-colors">
                       <td className="px-6 py-4 text-sm text-zinc-600 dark:text-zinc-400">
                         {new Date(order.createdAt).toLocaleDateString()}
                       </td>
-                      <td className="px-6 py-4 font-mono text-xs">
-                        #{order.id.slice(-6).toUpperCase()}
-                      </td>
-                      <td className="px-6 py-4 text-sm text-right font-medium">
-                        ₹{order.finalAmount.toLocaleString()}
-                      </td>
-                      <td className="px-6 py-4 text-sm text-right text-green-600">
-                        ₹{order.paidAmount.toLocaleString()}
-                      </td>
-                      <td className="px-6 py-4 text-sm text-right font-bold text-red-600">
-                        ₹{order.dueAmount.toLocaleString()}
-                      </td>
+                      <td className="px-6 py-4 font-mono text-xs">#{order.id.slice(-6).toUpperCase()}</td>
+                      <td className="px-6 py-4 text-sm text-right font-medium">₹{order.finalAmount.toLocaleString()}</td>
+                      <td className="px-6 py-4 text-sm text-right text-green-600">₹{order.paidAmount.toLocaleString()}</td>
+                      <td className="px-6 py-4 text-sm text-right font-bold text-red-600">₹{order.dueAmount.toLocaleString()}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -307,7 +295,6 @@ export default function CustomerDetailPage({
             </div>
           </div>
 
-          {/* Hidden Print Component */}
           <div className="hidden">
             <CustomerBill
               ref={contentRef}
@@ -317,6 +304,15 @@ export default function CustomerDetailPage({
             />
           </div>
         </>
+      )}
+
+      {/* Modal Connection */}
+      {isEditModalOpen && customer && (
+          <CustomerEditModal 
+            customer={customer} 
+            onClose={() => setIsEditModalOpen(false)} 
+            onUpdated={handleUpdateSuccess} 
+          />
       )}
     </div>
   );
