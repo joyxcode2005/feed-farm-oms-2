@@ -93,3 +93,13 @@ export interface FeedStock {
   unitSize: number;
   quantityAvailableBags: number;
 }
+
+//Expense type
+export interface Expense {
+  id: string;
+  category: string;
+  amount: number;
+  note?: string;
+  expenseDate: string;
+  createdAt: string;
+}

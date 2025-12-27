@@ -13,6 +13,7 @@ import feedcategoryRouter from "./routes/feedCategory.routes";
 import orderRouter from "./routes/order.routes";
 import paymentsRouter from "./routes/payments.routes";
 import { initCronJobs } from "./config/cron";
+import expenseRouter from "./routes/expense.routes"
 
 dotenv.config();
 
@@ -41,6 +42,7 @@ app.use("/api/v1/admin/animal-types", animaltypesRouter);
 app.use("/api/v1/admin/feed-categories", feedcategoryRouter);
 app.use("/api/v1/admin/orders", orderRouter);
 app.use("/api/v1/admin/payments", paymentsRouter);
+app.use("/api/v1/admin/expenses", expenseRouter); 
 
 app.listen(PORT, () => {
   console.log(`Server is listening on port ${PORT}`);

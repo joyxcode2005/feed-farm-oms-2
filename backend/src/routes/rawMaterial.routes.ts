@@ -16,6 +16,7 @@ import {
   getRawMaterialSnapshots,
   getRawMaterialsSummaryDB
 } from "../controllers/rawMaterial.controller";
+import prisma from "../config/prisma";
 
 const router = Router();
 
@@ -126,50 +127,59 @@ router.get("/", async (req: Request, res: Response) => {
 // Route to add raw material stock (IN)
 router.post("/:id/stock/in", async (req: Request, res: Response) => {
   try {
-    // Parse the body data properly
-    const { success, error, data } = rawMaterialStockInSchema.safeParse(req.body);
+    const { quantity, totalPrice, notes, referenceId, referenceType } = req.body;
     const adminUserId = (req as any).adminId;
-
-    if (!success)
-      return res.status(402).json({
-        success: false,
-        message: "Invalid Input!!",
-        error: error.flatten().fieldErrors,
-      });
-
-    // Destructure the data from the parsed data
-    const { quantity, referenceId, referenceType, notes } = data;
-
-    if (!quantity)
-      return res.status(402).json({
-        success: false,
-        message: "Quantity is required!!",
-      });
-
-    // Get the raw material id from the query params
     const rawMaterialId = req.params.id;
 
-    // Create a new raw material stock in txn...
-    const txn = await createRawMaterialStockTxn(
-      rawMaterialId,
-      adminUserId,
-      quantity,
-      "IN",
-      referenceId,
-      referenceType,
-      notes,
-    );
+    if (!quantity || quantity <= 0) {
+      return res.status(400).json({ success: false, message: "Valid quantity is required" });
+    }
+
+    // Use a transaction to perform both operations
+    const result = await prisma.$transaction(async (tx) => {
+      // 1. Fetch material name for the expense note
+      const material = await tx.rawMaterial.findUnique({
+        where: { id: rawMaterialId },
+        select: { name: true }
+      });
+
+      // 2. Create the Stock Transaction
+      const stockTxn = await tx.rawMaterialStockTransaction.create({
+        data: {
+          rawMaterialId,
+          adminUserId,
+          type: "IN",
+          quantity: Number(quantity),
+          referenceId,
+          referenceType,
+          notes,
+        },
+      });
+
+      // 3. Create the Expense Record if totalPrice is provided
+      let expense = null;
+      if (totalPrice && totalPrice > 0) {
+        expense = await tx.expense.create({
+          data: {
+            category: "Raw Materials",
+            amount: Number(totalPrice),
+            note: `Purchase: ${quantity} units of ${material?.name}. ${notes || ""}`,
+            expenseDate: new Date(),
+          }
+        });
+      }
+
+      return { stockTxn, expense };
+    });
 
     return res.status(201).json({
       success: true,
-      message: "Raw material stock added successfully!!",
-      data: txn,
+      message: "Stock and Expense recorded successfully",
+      data: result,
     });
   } catch (error) {
-    return res.status(500).json({
-      success: false,
-      message: "Internal Server Error!!",
-    });
+    console.error("Stock IN failed:", error);
+    return res.status(500).json({ success: false, message: "Internal Server Error" });
   }
 });
 

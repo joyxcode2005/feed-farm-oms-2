@@ -1,9 +1,9 @@
 import {
-  CircleDollarSign,
   Factory,
   LayoutDashboard,
   Map,
   Package,
+  ReceiptText,
   Settings,
   ShoppingCart,
   UserCircle,
@@ -50,10 +50,10 @@ export const sidebarItems: SidebarItem[] = [
     icon: <UserCircle size={18} />,
   },
   {
-    key: "Payments", 
-    label: "Customer Ledger", // Changed from "Payments"
-    href: "/dashboard/payments",
-    icon: <CircleDollarSign size={18} />,
+    key: "Expenses",
+    label: "Expenses",
+    href: "/dashboard/expenses",
+    icon: <ReceiptText size={18} />,
   },
   {
     key: "Admins",

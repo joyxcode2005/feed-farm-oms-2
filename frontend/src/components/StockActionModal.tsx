@@ -17,6 +17,7 @@ export default function StockActionModal({ material, type, onClose, onSuccess }:
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
     quantity: "",
+    totalPrice: "", // Added for Expense tracking
     notes: "",
   });
 
@@ -24,21 +25,21 @@ export default function StockActionModal({ material, type, onClose, onSuccess }:
     e.preventDefault();
     setLoading(true);
 
-    // Prepare payload (convert quantity to number)
     const payload = {
       quantity: Number(formData.quantity),
+      totalPrice: type === "IN" ? Number(formData.totalPrice) : undefined, // Only send if "IN"
       notes: formData.notes,
     };
 
     try {
-      // Endpoint changes based on type
       const endpoint = type === "IN" 
         ? `/raw-materials/${material.id}/stock/in`
         : `/raw-materials/${material.id}/stock/out`;
 
       await api.post(endpoint, payload);
-      toast.success(type === "IN" ? "Stock added successfully" : "Stock removed successfully");
+      toast.success(type === "IN" ? "Stock & Expense recorded" : "Stock removed successfully");
       onSuccess();
+      onClose();
     } catch (error: any) {
       toast.error(error.response?.data?.message || "Transaction failed");
     } finally {
@@ -63,7 +64,7 @@ export default function StockActionModal({ material, type, onClose, onSuccess }:
               <p className="text-xs text-zinc-500">{material.name}</p>
             </div>
           </div>
-          <button onClick={onClose} className="text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200">
+          <button onClick={onClose} className="text-zinc-400 hover:text-zinc-600">
             <X className="w-5 h-5" />
           </button>
         </div>
@@ -80,43 +81,56 @@ export default function StockActionModal({ material, type, onClose, onSuccess }:
               step="0.01"
               value={formData.quantity}
               onChange={(e) => setFormData({ ...formData, quantity: e.target.value })}
-              className="w-full px-3 py-2 rounded-lg border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 focus:ring-2 focus:ring-indigo-500 outline-none font-mono"
+              className="w-full px-3 py-2 rounded-lg border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800"
               placeholder="0.00"
             />
           </div>
+
+          {/* NEW: Price Field for Purchases */}
+          {isStockIn && (
+            <div>
+              <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1">
+                Total Cost (₹)
+              </label>
+              <input
+                required
+                type="number"
+                min="0"
+                step="0.01"
+                value={formData.totalPrice}
+                onChange={(e) => setFormData({ ...formData, totalPrice: e.target.value })}
+                className="w-full px-3 py-2 rounded-lg border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-emerald-600 font-bold"
+                placeholder="Total amount paid"
+              />
+            </div>
+          )}
 
           <div>
             <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1">
               Notes (Optional)
             </label>
             <textarea
-              rows={3}
+              rows={2}
               value={formData.notes}
               onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
-              className="w-full px-3 py-2 rounded-lg border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 focus:ring-2 focus:ring-indigo-500 outline-none resize-none"
-              placeholder={isStockIn ? "e.g. Purchase from Vendor X" : "e.g. Used for Batch #102"}
+              className="w-full px-3 py-2 rounded-lg border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800"
+              placeholder={isStockIn ? "Vendor name, Invoice #" : "Reason for use"}
             />
           </div>
 
           <div className="pt-2 flex justify-end gap-3">
-            <button
-              type="button"
-              onClick={onClose}
-              className="px-4 py-2 text-sm font-medium text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-lg transition-colors"
-            >
+            <button type="button" onClick={onClose} className="px-4 py-2 text-sm font-medium text-zinc-700">
               Cancel
             </button>
             <button
               type="submit"
               disabled={loading}
-              className={`px-4 py-2 text-sm font-medium text-white rounded-lg transition-colors flex items-center gap-2 disabled:opacity-50 ${
-                isStockIn 
-                  ? "bg-emerald-600 hover:bg-emerald-700" 
-                  : "bg-amber-600 hover:bg-amber-700"
+              className={`px-4 py-2 text-sm font-medium text-white rounded-lg flex items-center gap-2 ${
+                isStockIn ? "bg-emerald-600 hover:bg-emerald-700" : "bg-amber-600 hover:bg-amber-700"
               }`}
             >
               {loading && <Loader2 className="w-4 h-4 animate-spin" />}
-              {isStockIn ? "Add Stock" : "Remove Stock"}
+              {isStockIn ? "Add Stock & Record Cost" : "Remove Stock"}
             </button>
           </div>
         </form>

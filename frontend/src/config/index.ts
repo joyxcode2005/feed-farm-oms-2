@@ -17,7 +17,7 @@ export const SidebarPages = [
   "Finished Feed Stock",
   "Orders",
   "Customers",
-  "Payments",
+  "Expenses",
   "Admins",
   "Settings",
   "Map",
