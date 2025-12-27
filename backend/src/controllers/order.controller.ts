@@ -249,18 +249,17 @@ export async function getOrderByIdDB(input: GetOrderByIdInput) {
 }
 
 /**
- * Updates order status with bulk stock deduction and transaction timeouts.
+ * Updates order status with full financial reconciliation for cancellations
+ * using the existing database schema.
  */
 export async function updateOrderStatusDB(input: UpdateOrderStatusInput) {
   const { orderId, status } = input;
 
   return prisma.$transaction(async (tx) => {
-    // 1. Fetch order + items
+    // 1. Fetch order with items and current status
     const order = await tx.order.findUnique({
       where: { id: orderId },
-      include: {
-        items: true,
-      },
+      include: { items: true },
     });
 
     if (!order) {
@@ -274,64 +273,82 @@ export async function updateOrderStatusDB(input: UpdateOrderStatusInput) {
       throw new Error("FINAL_STATE");
     }
 
-    // 3. Prevent reverting to PENDING
-    if (status === "PENDING") {
-      throw new Error("CANNOT_REVERT_TO_PENDING");
-    }
+    // 3. HANDLE CANCELLATION LOGIC
+    if (status === "CANCELED") {
+      const advanceAmount = order.paidAmount;
+      const orderDueAmount = order.dueAmount;
 
-    // 4. Handle DISPATCH → deduct stock
-    if (status === "DISPATCHED") {
-      if (currentStatus !== "CONFIRMED") {
-        throw new Error("INVALID_DISPATCH_STATE");
-      }
-
-      // Optimized Stock Check: Fetch all in bulk
-      const categoryIds = order.items.map(i => i.feedCategoryId);
-      const stocks = await tx.finishedFeedStock.findMany({
-        where: { feedCategoryId: { in: categoryIds } }
+      // A. Update the order financials: reset debt and payments
+      await tx.order.update({
+        where: { id: orderId },
+        data: {
+          orderStatus: "CANCELED",
+          dueAmount: 0,
+          paidAmount: 0, 
+        },
       });
 
-      for (const item of order.items) {
-        const stock = stocks.find(s => s.feedCategoryId === item.feedCategoryId);
-        if (!stock || stock.quantityAvailable < item.quantityBags) {
-          throw new Error("INSUFFICIENT_STOCK");
+      // B. Record a Refund if there was an advance payment
+      if (advanceAmount > 0) {
+        await tx.payment.create({
+          data: {
+            orderId: order.id,
+            adminUserId: order.adminUserId,
+            amountPaid: -advanceAmount, // Negative entry to balance the ledger
+            paymentMethod: "OTHER",
+            note: `Refund: Order #${orderId.slice(0, 8)} canceled`,
+          },
+        });
+      }
+
+      // C. Update Customer Snapshot (decrementing existing schema fields)
+      const latestSnapshot = await tx.customerSummarySnapshot.findFirst({
+        where: { customerId: order.customerId },
+        orderBy: { date: "desc" },
+      });
+
+      if (latestSnapshot) {
+        await tx.customerSummarySnapshot.update({
+          where: { id: latestSnapshot.id },
+          data: {
+            totalDue: { decrement: orderDueAmount },
+            totalPaid: { decrement: advanceAmount },
+            totalOrders: { decrement: 1 }, // Remove from total count
+          },
+        });
+      }
+
+      // D. Restore Stock (if previously dispatched)
+      if (currentStatus === "DISPATCHED") {
+        for (const item of order.items) {
+          await tx.finishedFeedStock.update({
+            where: { feedCategoryId: item.feedCategoryId },
+            data: { quantityAvailable: { increment: item.quantityBags } },
+          });
+
+          await tx.finishedFeedStockTransaction.create({
+            data: {
+              feedCategoryId: item.feedCategoryId,
+              adminUserId: order.adminUserId,
+              type: "ADJUSTMENT",
+              quantityBags: item.quantityBags,
+              orderId: order.id,
+              notes: "Stock restored (Order Canceled)",
+            },
+          });
         }
       }
-
-      // Deduct stock + ledger entries
-      for (const item of order.items) {
-        await tx.finishedFeedStock.update({
-          where: { feedCategoryId: item.feedCategoryId },
-          data: {
-            quantityAvailable: {
-              decrement: item.quantityBags,
-            },
-          },
-        });
-
-        await tx.finishedFeedStockTransaction.create({
-          data: {
-            feedCategoryId: item.feedCategoryId,
-            adminUserId: order.adminUserId,
-            type: "SALE_OUT",
-            quantityBags: item.quantityBags,
-            orderId: order.id,
-            notes: "Stock deducted on dispatch",
-          },
-        });
-      }
+      return { id: orderId, status: "CANCELED" };
     }
 
-    // 5. Update order status
+    // 4. Standard Status Update Logic
     return tx.order.update({
       where: { id: orderId },
-      data: {
-        orderStatus: status,
-      },
+      data: { orderStatus: status },
     });
   }, {
-    maxWait: 5000, //
-    timeout: 10000 //
+    maxWait: 5000,
+    timeout: 10000 
   });
 }
 

@@ -74,6 +74,7 @@ export default function CustomerDetailPage({
   const [isEditModalOpen, setIsEditModalOpen] = useState(false); // State for modal
 
   const { data, isError, isLoading } = useQuery<DetailData>({
+    refetchOnMount: true,
     queryKey: ["customer", customerId],
     queryFn: async () => {
       const [profileRes, ledgerRes] = await Promise.all([
@@ -105,7 +106,7 @@ export default function CustomerDetailPage({
       }
       return undefined;
     },
-    staleTime: 1000 * 60 * 5,
+    staleTime: 1000 * 5,
     enabled: !!customerId,
   });
 
