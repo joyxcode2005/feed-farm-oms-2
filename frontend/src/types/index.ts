@@ -54,6 +54,8 @@ export interface Customer {
   phone: string;
   district: string;
   address?: string;
+  latitude?: number; // Add this
+  longitude?: number; // Add this
   type: "SINGLE" | "DISTRIBUTER";
 }
 

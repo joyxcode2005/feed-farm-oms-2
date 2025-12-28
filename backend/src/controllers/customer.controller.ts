@@ -70,6 +70,8 @@ export async function getAllCustomersDB(input: GetAllCustomersInput) {
       phone: true,
       type: true,
       district: true,
+      latitude: true,
+      longitude: true,
       createdAt: true,
     },
   });
@@ -212,7 +214,7 @@ export async function getAllCustomersFinancialSummaryDB() {
         acc.totalOutstanding += order.dueAmount;
         return acc;
       },
-      { totalPurchased: 0, totalPaid: 0, totalOutstanding: 0 }
+      { totalPurchased: 0, totalPaid: 0, totalOutstanding: 0 },
     );
 
     return {

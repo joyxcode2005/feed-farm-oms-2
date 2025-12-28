@@ -31,11 +31,13 @@ model Customer {
   phone                    String                    @unique
   address                  String?
   type                     CustomerType              @default(SINGLE)
-  district                 String
   createdByAdminId         String?
   createdAt                DateTime                  @default(now())
   updatedAt                DateTime                  @updatedAt
   adminUserId              String?
+  district                 String
+  latitude                 Float?
+  longitude                Float?
   adminUser                AdminUser?                @relation(fields: [adminUserId], references: [id])
   createdByAdmin           AdminUser?                @relation("CreatedByAdmin", fields: [createdByAdminId], references: [id])
   customerSummarySnapshots CustomerSummarySnapshot[]
@@ -257,37 +259,34 @@ model Expense {
   @@index([expenseDate])
 }
 
-// NEW: Refund Model for the approval workflow
 model Refund {
   id          String       @id @default(uuid())
   orderId     String
   customerId  String
-  adminUserId String? // Admin who approved/rejected
+  adminUserId String?
   amount      Float
   reason      String?
   status      RefundStatus @default(PENDING)
   createdAt   DateTime     @default(now())
   updatedAt   DateTime     @updatedAt
-
-  order     Order      @relation(fields: [orderId], references: [id])
-  customer  Customer   @relation(fields: [customerId], references: [id])
-  adminUser AdminUser? @relation(fields: [adminUserId], references: [id])
+  adminUser   AdminUser?   @relation(fields: [adminUserId], references: [id])
+  customer    Customer     @relation(fields: [customerId], references: [id])
+  order       Order        @relation(fields: [orderId], references: [id])
 
   @@index([orderId])
   @@index([customerId])
 }
 
-// NEW: DailyReport Model for Dashboard Analytics
 model DailyReport {
   id                String   @id @default(uuid())
   date              DateTime @unique
-  totalSales        Float    @default(0) // Sum of order finalAmounts
-  totalRevenue      Float    @default(0) // Sum of actual payments received
-  totalExpenses     Float    @default(0) // Sum of expenses
-  totalOrders       Int      @default(0) // Count of orders
-  totalRefunds      Float    @default(0) // Sum of approved refunds
-  totalProductionKg Float    @default(0) // Total feed produced in KG
-  totalBatches      Int      @default(0) // Number of production batches
+  totalSales        Float    @default(0)
+  totalRevenue      Float    @default(0)
+  totalExpenses     Float    @default(0)
+  totalOrders       Int      @default(0)
+  totalRefunds      Float    @default(0)
+  totalProductionKg Float    @default(0)
+  totalBatches      Int      @default(0)
   createdAt         DateTime @default(now())
   updatedAt         DateTime @updatedAt
 

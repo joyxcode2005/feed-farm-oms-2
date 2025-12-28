@@ -1,4 +1,5 @@
 import "dotenv/config";
+import prisma from "./prisma";
 import {
   AdminRole,
   CustomerType,
@@ -7,11 +8,9 @@ import {
   FinishedStockTxnType,
   OrderStatus,
   PaymentMethod,
-  RefundStatus,
 } from "@prisma/client";
 import bcrypt from "bcryptjs";
 import { startOfDay, endOfDay, eachDayOfInterval } from "date-fns";
-import prisma from "./prisma";
 
 async function main() {
   console.log("Starting Robust Master Seed (Nov 2024 - Dec 2025)...");
@@ -95,8 +94,18 @@ async function main() {
 
   // 5. Setup Customers
   const districts = ["Kolkata", "Hooghly", "Nadia", "Bankura"];
+  // Add these sample coordinates for districts
+  const districtCoords: Record<string, { lat: number; lng: number }> = {
+    Kolkata: { lat: 22.5726, lng: 88.3639 },
+    Hooghly: { lat: 22.9011, lng: 88.3915 },
+    Nadia: { lat: 23.471, lng: 88.5565 },
+    Bankura: { lat: 23.2324, lng: 87.0632 },
+  };
+
   const customers = [];
   for (let i = 0; i < 4; i++) {
+    const districtName = districts[i];
+    const coords = districtCoords[districtName];
     const c = await prisma.customer.upsert({
       where: { phone: `983100000${i}` },
       update: {},
@@ -105,6 +114,8 @@ async function main() {
         phone: `983100000${i}`,
         district: districts[i],
         type: i % 2 === 0 ? CustomerType.DISTRIBUTER : CustomerType.SINGLE,
+        latitude: coords.lat + (Math.random() - 0.5) * 0.1, // Add slight variance
+        longitude: coords.lng + (Math.random() - 0.5) * 0.1,
         createdByAdminId: superAdmin.id,
       },
     });
