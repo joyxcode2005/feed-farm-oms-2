@@ -103,6 +103,69 @@ export async function generateDailySnapshots() {
       });
     }
 
+    // 3. Process Customer Summaries individually
+    // Inside the generateDailySnapshots function
+const customers = await prisma.customer.findMany();
+for (const customer of customers) {
+  await prisma.$transaction(async (tx) => {
+    // 1. Count valid orders (exclude CANCELED)
+    const validOrders = await tx.order.findMany({
+      where: {
+        customerId: customer.id,
+        createdAt: { lte: endDate },
+        NOT: { orderStatus: "CANCELED" },
+      }
+    });
+
+    const totalOrders = validOrders.length;
+    const totalPurchasedValue = validOrders.reduce((acc, o) => acc + o.finalAmount, 0);
+
+    // 2. Sum all payments (including negative refunds) up to this date
+    const paymentSum = await tx.payment.aggregate({
+      where: {
+        order: { customerId: customer.id },
+        paymentDate: { lte: endDate },
+      },
+      _sum: { amountPaid: true },
+    });
+
+    const totalPaid = paymentSum._sum.amountPaid || 0;
+    const totalDue = totalPurchasedValue - totalPaid; // Financial balance
+
+    // 3. Find the most recent successful order date
+    const latestOrder = await tx.order.findFirst({
+      where: {
+        customerId: customer.id,
+        createdAt: { lte: endDate },
+        NOT: { orderStatus: "CANCELED" },
+      },
+      orderBy: { createdAt: "desc" },
+      select: { createdAt: true }
+    });
+
+    await tx.customerSummarySnapshot.upsert({
+      where: { customerId_date: { customerId: customer.id, date: startDate } },
+      update: { 
+        totalOrders, 
+        totalPaid, 
+        totalDue,
+        lastOrderAt: latestOrder?.createdAt || null 
+      },
+      create: { 
+        customerId: customer.id, 
+        date: startDate, 
+        totalOrders, 
+        totalPaid, 
+        totalDue,
+        lastOrderAt: latestOrder?.createdAt || null 
+      },
+    });
+  }, {
+    maxWait: 5000,
+    timeout: 10000
+  });
+}
+
     console.log(`[Cron] Snapshots generated successfully for ${startDate.toDateString()}`);
   } catch (error) {
     console.error("[Cron] Failed to generate daily snapshots:", error);
