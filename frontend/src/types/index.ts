@@ -1,3 +1,5 @@
+import { SidebarPageType } from "../config";
+
 export type OrderStatus =
   | "PENDING"
   | "CONFIRMED"
@@ -102,4 +104,39 @@ export interface Expense {
   note?: string;
   expenseDate: string;
   createdAt: string;
+}
+
+export type RefundStatus = "PENDING" | "APPROVED" | "REJECTED";
+
+export interface Refund {
+  id: string;
+  orderId: string;
+  customerId: string;
+  amount: number;
+  reason: string | null;
+  status: RefundStatus;
+  createdAt: string;
+  updatedAt: string;
+  customer: {
+    name: string;
+    phone: string;
+  };
+  order: {
+    id: string;
+    finalAmount: number;
+    paidAmount: number;
+  };
+}
+
+export interface DashboardStats {
+  totalSales: number; // Value of orders placed
+  totalRevenue: number; // Actual cash received
+  totalExpenses: number; // Business expenses
+  totalOrders: number; // Number of orders
+  totalProductionKg: number; // Weight of feed produced
+  totalBatches: number; // Number of batches produced
+}
+
+export interface DashboardProps {
+  onNavigate?: (page: SidebarPageType) => void;
 }

@@ -4,6 +4,7 @@ import {
   Map,
   Package,
   ReceiptText,
+  RotateCcw,
   Settings,
   ShoppingCart,
   UserCircle,
@@ -42,6 +43,12 @@ export const sidebarItems: SidebarItem[] = [
     label: "Orders",
     href: "/dashboard/orders",
     icon: <ShoppingCart size={18} />,
+  },
+  {
+    key: "Refunds",
+    label: "Refunds",
+    href: "/dashboard/refunds",
+    icon: <RotateCcw className="w-5 h-5" />,
   },
   {
     key: "Customers",

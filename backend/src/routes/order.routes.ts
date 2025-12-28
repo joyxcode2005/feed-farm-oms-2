@@ -9,9 +9,9 @@ import {
   createOrderDB,
   getOrderByIdDB,
   getOrdersDB,
+  getOrderSummeryDB,
   updateOrderDeliveryDateDB,
   updateOrderStatusDB,
-  getOrderSummaryDB, // NEW IMPORT
 } from "../controllers/order.controller";
 import { OrderStatus } from "@prisma/client";
 
@@ -32,10 +32,7 @@ router.get("/summary", async (req: Request, res: Response) => {
       });
     }
 
-    const summary = await getOrderSummaryDB(
-      new Date(from as string),
-      new Date(to as string)
-    );
+    const summary = await getOrderSummeryDB(new Date(from as string), new Date(to as string));
 
     return res.status(200).json(summary);
   } catch (error) {
@@ -168,7 +165,7 @@ router.get("/:id", async (req: Request, res: Response) => {
 router.put("/:id/status", async (req: Request, res: Response) => {
   try {
     const parsed = statusSchema.safeParse(req.body);
-
+  const { adminUserId } = (req as any).adminId;
     if (!parsed.success) {
       return res.status(400).json({
         success: false,
@@ -201,6 +198,7 @@ router.put("/:id/status", async (req: Request, res: Response) => {
     const updated = await updateOrderStatusDB({
       orderId: id,
       status: newStatus,
+      adminUserId,
     });
 
     return res.status(200).json({

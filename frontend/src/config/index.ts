@@ -16,6 +16,7 @@ export const SidebarPages = [
   "Raw Material Stock",
   "Finished Feed Stock",
   "Orders",
+  "Refunds",
   "Customers",
   "Expenses",
   "Admins",
@@ -58,3 +59,5 @@ export const DISTRICT_STYLES: Record<string, string> = {
   "Medinipur East": "fill-orange-500", // Purba Medinipur in your JSON
   Jhargram: "fill-purple-400",
 };
+
+
