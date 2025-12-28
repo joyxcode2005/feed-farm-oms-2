@@ -12,8 +12,10 @@ import animaltypesRouter from "./routes/animalType.routes";
 import feedcategoryRouter from "./routes/feedCategory.routes";
 import orderRouter from "./routes/order.routes";
 import paymentsRouter from "./routes/payments.routes";
+import refundRouter from "./routes/refund.routes";
+import analyticsRouter from "./routes/analytics.routes";
 import { initCronJobs } from "./config/cron";
-import expenseRouter from "./routes/expense.routes"
+import expenseRouter from "./routes/expense.routes";
 
 dotenv.config();
 
@@ -42,7 +44,9 @@ app.use("/api/v1/admin/animal-types", animaltypesRouter);
 app.use("/api/v1/admin/feed-categories", feedcategoryRouter);
 app.use("/api/v1/admin/orders", orderRouter);
 app.use("/api/v1/admin/payments", paymentsRouter);
-app.use("/api/v1/admin/expenses", expenseRouter); 
+app.use("/api/v1/admin/expenses", expenseRouter);
+app.use("/api/v1/admin/refunds", refundRouter);
+app.use("/api/v1/admin/analytics", analyticsRouter);
 
 app.listen(PORT, () => {
   console.log(`Server is listening on port ${PORT}`);

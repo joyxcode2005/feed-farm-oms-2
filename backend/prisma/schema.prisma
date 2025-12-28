@@ -22,6 +22,7 @@ model AdminUser {
   payments                     Payment[]
   productionBatches            ProductionBatch[]
   rawMaterialStockTransactions RawMaterialStockTransaction[]
+  refunds                      Refund[]
 }
 
 model Customer {
@@ -39,6 +40,7 @@ model Customer {
   createdByAdmin           AdminUser?                @relation("CreatedByAdmin", fields: [createdByAdminId], references: [id])
   customerSummarySnapshots CustomerSummarySnapshot[]
   orders                   Order[]
+  refunds                  Refund[]
 
   @@index([createdAt])
   @@index([district])
@@ -208,6 +210,7 @@ model Order {
   customer      Customer                       @relation(fields: [customerId], references: [id])
   items         OrderItem[]
   payments      Payment[]
+  refunds       Refund[]
 
   @@index([customerId, createdAt])
   @@index([orderStatus])
@@ -252,6 +255,43 @@ model Expense {
   createdAt   DateTime @default(now())
 
   @@index([expenseDate])
+}
+
+// NEW: Refund Model for the approval workflow
+model Refund {
+  id          String       @id @default(uuid())
+  orderId     String
+  customerId  String
+  adminUserId String? // Admin who approved/rejected
+  amount      Float
+  reason      String?
+  status      RefundStatus @default(PENDING)
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+
+  order     Order      @relation(fields: [orderId], references: [id])
+  customer  Customer   @relation(fields: [customerId], references: [id])
+  adminUser AdminUser? @relation(fields: [adminUserId], references: [id])
+
+  @@index([orderId])
+  @@index([customerId])
+}
+
+// NEW: DailyReport Model for Dashboard Analytics
+model DailyReport {
+  id                String   @id @default(uuid())
+  date              DateTime @unique
+  totalSales        Float    @default(0) // Sum of order finalAmounts
+  totalRevenue      Float    @default(0) // Sum of actual payments received
+  totalExpenses     Float    @default(0) // Sum of expenses
+  totalOrders       Int      @default(0) // Count of orders
+  totalRefunds      Float    @default(0) // Sum of approved refunds
+  totalProductionKg Float    @default(0) // Total feed produced in KG
+  totalBatches      Int      @default(0) // Number of production batches
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  @@index([date])
 }
 
 model CustomerSummarySnapshot {
@@ -315,4 +355,10 @@ enum AdminRole {
 enum MaterialUnit {
   KG
   TON
+}
+
+enum RefundStatus {
+  PENDING
+  APPROVED
+  REJECTED
 }

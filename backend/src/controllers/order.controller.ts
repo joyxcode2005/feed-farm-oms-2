@@ -29,38 +29,51 @@ interface UpdateOrderStatusInput {
   status: OrderStatus;
 }
 
+interface UpdateOrderDeliveryDateInput {
+  orderId: string;
+  deliveryDate: Date;
+}
+
+interface UpdateOrderStatusInput {
+  orderId: string;
+  status: OrderStatus;
+  adminUserId: string; // Added to track who is canceling
+}
+
 /**
  * Aggregates order totals and status breakdown for dashboard summaries.
  */
-export async function getOrderSummaryDB(from: Date, to: Date) {
-  const totals = await prisma.order.aggregate({
+export async function getOrderSummeryDB(from: Date, to: Date) {
+  // 1. Total Sales: Sum of finalAmount of all non-cancelled orders
+  const salesData = await prisma.order.aggregate({
     where: {
-      createdAt: { gte: from, lte: to }
+      createdAt: { gte: from, lte: to },
+      NOT: { orderStatus: "CANCELED" },
     },
-    _sum: {
-      finalAmount: true,
-      paidAmount: true,
-      dueAmount: true,
-    },
-    _count: {
-      id: true,
-    }
+    _sum: { finalAmount: true },
+    _count: { id: true },
   });
 
-  const statusCounts = await prisma.order.groupBy({
-    by: ['orderStatus'],
+  // 2. Actual Revenue: Sum of all positive payments received
+  const revenueDate = await prisma.payment.aggregate({
     where: {
-      createdAt: { gte: from, lte: to }
+      paymentDate: { gte: from, lte: to },
+      amountPaid: { gt: 0 },
     },
-    _count: {
-      id: true,
-    }
+    _sum: { amountPaid: true },
+  });
+
+  // 3. Status Breakdown
+  const statusCounts = await prisma.order.groupBy({
+    by: ["orderStatus"],
+    where: { createdAt: { gte: from, lte: to } },
+    _count: { id: true },
   });
 
   return {
-    totals: totals._sum,
-    totalOrders: totals._count.id,
-    statusBreakdown: statusCounts
+    totalSales: salesData._sum.finalAmount || 0,
+    totalRevenue: revenueDate._sum.amountPaid || 0,
+    statusBreakdown: statusCounts,
   };
 }
 
@@ -70,76 +83,79 @@ export async function getOrderSummaryDB(from: Date, to: Date) {
 export async function createOrderDB(input: CreateOrderInput) {
   const { customerId, adminUserId, items, discountType, discountValue, deliveryDate } = input;
 
-  return prisma.$transaction(async (tx) => {
-    // 1. Validate customer
-    const customer = await tx.customer.findUnique({
-      where: { id: customerId },
-      select: { id: true },
-    });
+  return prisma.$transaction(
+    async (tx) => {
+      // 1. Validate customer
+      const customer = await tx.customer.findUnique({
+        where: { id: customerId },
+        select: { id: true },
+      });
 
-    if (!customer) {
-      throw new Error("CUSTOMER_NOT_FOUND");
-    }
-
-    // 2. Optimized Stock Validation: Fetch all required stocks in ONE query
-    const categoryIds = items.map(item => item.feedCategoryId);
-    const availableStocks = await tx.finishedFeedStock.findMany({
-      where: { feedCategoryId: { in: categoryIds } }
-    });
-
-    let totalAmount = 0;
-
-    for (const item of items) {
-      const stock = availableStocks.find(s => s.feedCategoryId === item.feedCategoryId);
-
-      if (!stock || stock.quantityAvailable < item.quantityBags) {
-        throw new Error("INSUFFICIENT_STOCK");
+      if (!customer) {
+        throw new Error("CUSTOMER_NOT_FOUND");
       }
 
-      totalAmount += item.quantityBags * item.pricePerBag;
-    }
+      // 2. Optimized Stock Validation: Fetch all required stocks in ONE query
+      const categoryIds = items.map((item) => item.feedCategoryId);
+      const availableStocks = await tx.finishedFeedStock.findMany({
+        where: { feedCategoryId: { in: categoryIds } },
+      });
 
-    // 3. Apply discount
-    let finalAmount = totalAmount;
+      let totalAmount = 0;
 
-    if (discountType === "FLAT" && discountValue) {
-      finalAmount -= discountValue;
-    } else if (discountType === "PERCENTAGE" && discountValue) {
-      finalAmount -= (totalAmount * discountValue) / 100;
-    }
+      for (const item of items) {
+        const stock = availableStocks.find((s) => s.feedCategoryId === item.feedCategoryId);
 
-    if (finalAmount < 0) finalAmount = 0;
+        if (!stock || stock.quantityAvailable < item.quantityBags) {
+          throw new Error("INSUFFICIENT_STOCK");
+        }
 
-    // 4. Create order
-    const order = await tx.order.create({
-      data: {
-        customerId,
-        adminUserId,
-        totalAmount,
-        discountType,
-        discountValue,
-        finalAmount,
-        dueAmount: finalAmount,
-        deliveryDate,
-      },
-    });
+        totalAmount += item.quantityBags * item.pricePerBag;
+      }
 
-    // 5. Create order items
-    await tx.orderItem.createMany({
-      data: items.map((item) => ({
-        orderId: order.id,
-        feedCategoryId: item.feedCategoryId,
-        quantityBags: item.quantityBags,
-        pricePerBag: item.pricePerBag,
-        subtotal: item.quantityBags * item.pricePerBag,
-      })),
-    });
+      // 3. Apply discount
+      let finalAmount = totalAmount;
 
-    return order;
-  }, {
-    maxWait: 5000, // Wait up to 5 seconds to acquire a connection
-    timeout: 10000 // Allow up to 10 seconds for the transaction to complete
-  });
+      if (discountType === "FLAT" && discountValue) {
+        finalAmount -= discountValue;
+      } else if (discountType === "PERCENTAGE" && discountValue) {
+        finalAmount -= (totalAmount * discountValue) / 100;
+      }
+
+      if (finalAmount < 0) finalAmount = 0;
+
+      // 4. Create order
+      const order = await tx.order.create({
+        data: {
+          customerId,
+          adminUserId,
+          totalAmount,
+          discountType,
+          discountValue,
+          finalAmount,
+          dueAmount: finalAmount,
+          deliveryDate,
+        },
+      });
+
+      // 5. Create order items
+      await tx.orderItem.createMany({
+        data: items.map((item) => ({
+          orderId: order.id,
+          feedCategoryId: item.feedCategoryId,
+          quantityBags: item.quantityBags,
+          pricePerBag: item.pricePerBag,
+          subtotal: item.quantityBags * item.pricePerBag,
+        })),
+      });
+
+      return order;
+    },
+    {
+      maxWait: 5000, // Wait up to 5 seconds to acquire a connection
+      timeout: 10000, // Allow up to 10 seconds for the transaction to complete
+    },
+  );
 }
 
 export async function getOrdersDB(input: GetOrdersInput) {
@@ -252,109 +268,84 @@ export async function getOrderByIdDB(input: GetOrderByIdInput) {
  * Updates order status with full financial reconciliation for cancellations
  * using the existing database schema.
  */
+/**
+ * UPDATED: Updates order status with the new Refund Workflow.
+ */
 export async function updateOrderStatusDB(input: UpdateOrderStatusInput) {
-  const { orderId, status } = input;
+  const { orderId, status, adminUserId } = input;
 
-  return prisma.$transaction(async (tx) => {
-    // 1. Fetch order with items and current status
-    const order = await tx.order.findUnique({
-      where: { id: orderId },
-      include: { items: true },
-    });
-
-    if (!order) {
-      throw new Error("ORDER_NOT_FOUND");
-    }
-
-    const currentStatus = order.orderStatus;
-
-    // 2. Block invalid final states
-    if (currentStatus === "DELIVERED" || currentStatus === "CANCELED") {
-      throw new Error("FINAL_STATE");
-    }
-
-    // 3. HANDLE CANCELLATION LOGIC
-    if (status === "CANCELED") {
-      const advanceAmount = order.paidAmount;
-      const orderDueAmount = order.dueAmount;
-
-      // A. Update the order financials: reset debt and payments
-      await tx.order.update({
+  return prisma.$transaction(
+    async (tx) => {
+      const order = await tx.order.findUnique({
         where: { id: orderId },
-        data: {
-          orderStatus: "CANCELED",
-          dueAmount: 0,
-          paidAmount: 0, 
-        },
+        include: { items: true },
       });
 
-      // B. Record a Refund if there was an advance payment
-      if (advanceAmount > 0) {
-        await tx.payment.create({
-          data: {
-            orderId: order.id,
-            adminUserId: order.adminUserId,
-            amountPaid: -advanceAmount, // Negative entry to balance the ledger
-            paymentMethod: "OTHER",
-            note: `Refund: Order #${orderId.slice(0, 8)} canceled`,
-          },
-        });
+      if (!order) throw new Error("ORDER_NOT_FOUND");
+
+      const currentStatus = order.orderStatus;
+      if (currentStatus === "DELIVERED" || currentStatus === "CANCELED") {
+        throw new Error("FINAL_STATE");
       }
 
-      // C. Update Customer Snapshot (decrementing existing schema fields)
-      const latestSnapshot = await tx.customerSummarySnapshot.findFirst({
-        where: { customerId: order.customerId },
-        orderBy: { date: "desc" },
-      });
-
-      if (latestSnapshot) {
-        await tx.customerSummarySnapshot.update({
-          where: { id: latestSnapshot.id },
-          data: {
-            totalDue: { decrement: orderDueAmount },
-            totalPaid: { decrement: advanceAmount },
-            totalOrders: { decrement: 1 }, // Remove from total count
-          },
-        });
-      }
-
-      // D. Restore Stock (if previously dispatched)
-      if (currentStatus === "DISPATCHED") {
-        for (const item of order.items) {
-          await tx.finishedFeedStock.update({
-            where: { feedCategoryId: item.feedCategoryId },
-            data: { quantityAvailable: { increment: item.quantityBags } },
-          });
-
-          await tx.finishedFeedStockTransaction.create({
+      // --- NEW CANCELLATION LOGIC ---
+      if (status === "CANCELED") {
+        // 1. If customer has paid money, generate a PENDING refund request
+        if (order.paidAmount > 0) {
+          await tx.refund.create({
             data: {
-              feedCategoryId: item.feedCategoryId,
-              adminUserId: order.adminUserId,
-              type: "ADJUSTMENT",
-              quantityBags: item.quantityBags,
               orderId: order.id,
-              notes: "Stock restored (Order Canceled)",
+              customerId: order.customerId,
+              amount: order.paidAmount,
+              status: "PENDING",
+              reason: `Order #${orderId.slice(0, 8)} canceled`,
             },
           });
         }
+
+        // 2. Reset order financials (Debt is cleared, paidAmount remains for record until refunded)
+        await tx.order.update({
+          where: { id: orderId },
+          data: {
+            orderStatus: "CANCELED",
+            dueAmount: 0,
+          },
+        });
+
+        // 3. Restore Stock if it was already out of the warehouse
+        if (currentStatus === "DISPATCHED") {
+          for (const item of order.items) {
+            await tx.finishedFeedStock.update({
+              where: { feedCategoryId: item.feedCategoryId },
+              data: { quantityAvailable: { increment: item.quantityBags } },
+            });
+
+            await tx.finishedFeedStockTransaction.create({
+              data: {
+                feedCategoryId: item.feedCategoryId,
+                adminUserId,
+                type: "ADJUSTMENT",
+                quantityBags: item.quantityBags,
+                orderId: order.id,
+                notes: "Stock restored (Order Canceled)",
+              },
+            });
+          }
+        }
+        return { id: orderId, status: "CANCELED" };
       }
-      return { id: orderId, status: "CANCELED" };
-    }
 
-    // 4. Standard Status Update Logic
-    return tx.order.update({
-      where: { id: orderId },
-      data: { orderStatus: status },
-    });
-  }, {
-    maxWait: 5000,
-    timeout: 10000 
-  });
-}
-
-interface UpdateOrderDeliveryDateInput {
-  orderId: string;
-  deliveryDate: Date;
+      // Standard transition (Pending -> Confirmed -> Dispatched, etc.)
+      return tx.order.update({
+        where: { id: orderId },
+        data: { orderStatus: status },
+      });
+    },
+    {
+      maxWait: 5000,
+      timeout: 10000,
+    },
+  );
 }
 
 export async function updateOrderDeliveryDateDB(input: UpdateOrderDeliveryDateInput) {
@@ -365,3 +356,8 @@ export async function updateOrderDeliveryDateDB(input: UpdateOrderDeliveryDateIn
     data: { deliveryDate },
   });
 }
+
+/**
+ * IMPROVED: Aggregates totals for the dashboard.
+ * Distinguishes between Sales (Order value) and Revenue (Actual cash).
+ */

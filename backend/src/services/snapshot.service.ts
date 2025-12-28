@@ -13,158 +13,228 @@ export async function generateDailySnapshots() {
     const rawMaterials = await prisma.rawMaterial.findMany();
     for (const material of rawMaterials) {
       // Each material gets its own short-lived transaction
-      await prisma.$transaction(async (tx) => {
-        const prevSnapshot = await tx.rawMaterialDailySnapshot.findFirst({
-          where: { rawMaterialId: material.id, date: subDays(startDate, 1) },
-        });
-        
-        const openingStock = prevSnapshot?.closingStockKg || 0;
+      await prisma.$transaction(
+        async (tx) => {
+          const prevSnapshot = await tx.rawMaterialDailySnapshot.findFirst({
+            where: { rawMaterialId: material.id, date: subDays(startDate, 1) },
+          });
 
-        const txns = await tx.rawMaterialStockTransaction.findMany({
-          where: {
-            rawMaterialId: material.id,
-            createdAt: { gte: startDate, lte: endDate },
-          },
-        });
+          const openingStock = prevSnapshot?.closingStockKg || 0;
 
-        const totalIn = txns
-          .filter(t => t.type === "IN")
-          .reduce((acc, t) => acc + t.quantity, 0);
-        const totalOut = txns
-          .filter(t => t.type === "OUT")
-          .reduce((acc, t) => acc + t.quantity, 0);
-        
-        const closingStock = openingStock + totalIn - totalOut;
+          const txns = await tx.rawMaterialStockTransaction.findMany({
+            where: {
+              rawMaterialId: material.id,
+              createdAt: { gte: startDate, lte: endDate },
+            },
+          });
 
-        await tx.rawMaterialDailySnapshot.upsert({
-          where: { rawMaterialId_date: { rawMaterialId: material.id, date: startDate } },
-          update: { 
-            openingStockKg: openingStock, 
-            totalInKg: totalIn, 
-            totalOutKg: totalOut, 
-            closingStockKg: closingStock 
-          },
-          create: { 
-            rawMaterialId: material.id, 
-            date: startDate, 
-            openingStockKg: openingStock, 
-            totalInKg: totalIn, 
-            totalOutKg: totalOut, 
-            closingStockKg: closingStock 
-          },
-        });
-      }, {
-        maxWait: 5000, // Shorter wait since these are small operations
-        timeout: 10000
-      });
+          const totalIn = txns
+            .filter((t) => t.type === "IN")
+            .reduce((acc, t) => acc + t.quantity, 0);
+          const totalOut = txns
+            .filter((t) => t.type === "OUT")
+            .reduce((acc, t) => acc + t.quantity, 0);
+
+          const closingStock = openingStock + totalIn - totalOut;
+
+          await tx.rawMaterialDailySnapshot.upsert({
+            where: { rawMaterialId_date: { rawMaterialId: material.id, date: startDate } },
+            update: {
+              openingStockKg: openingStock,
+              totalInKg: totalIn,
+              totalOutKg: totalOut,
+              closingStockKg: closingStock,
+            },
+            create: {
+              rawMaterialId: material.id,
+              date: startDate,
+              openingStockKg: openingStock,
+              totalInKg: totalIn,
+              totalOutKg: totalOut,
+              closingStockKg: closingStock,
+            },
+          });
+        },
+        {
+          maxWait: 5000, // Shorter wait since these are small operations
+          timeout: 10000,
+        },
+      );
     }
 
     // 2. Process Finished Feed Categories individually
     const feedCategories = await prisma.feedCategory.findMany();
     for (const category of feedCategories) {
-      await prisma.$transaction(async (tx) => {
-        const prevSnapshot = await tx.finishedFeedDailySnapshot.findFirst({
-          where: { feedCategoryId: category.id, date: subDays(startDate, 1) },
-        });
-        
-        const openingBags = prevSnapshot?.closingBags || 0;
+      await prisma.$transaction(
+        async (tx) => {
+          const prevSnapshot = await tx.finishedFeedDailySnapshot.findFirst({
+            where: { feedCategoryId: category.id, date: subDays(startDate, 1) },
+          });
 
-        const txns = await tx.finishedFeedStockTransaction.findMany({
-          where: {
-            feedCategoryId: category.id,
-            createdAt: { gte: startDate, lte: endDate },
-          },
-        });
+          const openingBags = prevSnapshot?.closingBags || 0;
 
-        const inBags = txns
-          .filter(t => t.type === "PRODUCTION_IN")
-          .reduce((acc, t) => acc + t.quantityBags, 0);
-        const outBags = txns
-          .filter(t => t.type === "SALE_OUT")
-          .reduce((acc, t) => acc + t.quantityBags, 0);
-        
-        const closingBags = openingBags + inBags - outBags;
+          const txns = await tx.finishedFeedStockTransaction.findMany({
+            where: {
+              feedCategoryId: category.id,
+              createdAt: { gte: startDate, lte: endDate },
+            },
+          });
 
-        await tx.finishedFeedDailySnapshot.upsert({
-          where: { feedCategoryId_date: { feedCategoryId: category.id, date: startDate } },
-          update: { openingBags, inBags, outBags, closingBags },
-          create: { 
-            feedCategoryId: category.id, 
-            date: startDate, 
-            openingBags, 
-            inBags, 
-            outBags, 
-            closingBags 
-          },
-        });
-      }, {
-        maxWait: 5000,
-        timeout: 10000
-      });
+          const inBags = txns
+            .filter((t) => t.type === "PRODUCTION_IN")
+            .reduce((acc, t) => acc + t.quantityBags, 0);
+          const outBags = txns
+            .filter((t) => t.type === "SALE_OUT")
+            .reduce((acc, t) => acc + t.quantityBags, 0);
+
+          const closingBags = openingBags + inBags - outBags;
+
+          await tx.finishedFeedDailySnapshot.upsert({
+            where: { feedCategoryId_date: { feedCategoryId: category.id, date: startDate } },
+            update: { openingBags, inBags, outBags, closingBags },
+            create: {
+              feedCategoryId: category.id,
+              date: startDate,
+              openingBags,
+              inBags,
+              outBags,
+              closingBags,
+            },
+          });
+        },
+        {
+          maxWait: 5000,
+          timeout: 10000,
+        },
+      );
     }
 
     // 3. Process Customer Summaries individually
     // Inside the generateDailySnapshots function
-const customers = await prisma.customer.findMany();
-for (const customer of customers) {
-  await prisma.$transaction(async (tx) => {
-    // 1. Count valid orders (exclude CANCELED)
-    const validOrders = await tx.order.findMany({
-      where: {
-        customerId: customer.id,
-        createdAt: { lte: endDate },
-        NOT: { orderStatus: "CANCELED" },
-      }
+    const customers = await prisma.customer.findMany();
+    for (const customer of customers) {
+      await prisma.$transaction(
+        async (tx) => {
+          // 1. Count valid orders (exclude CANCELED)
+          const validOrders = await tx.order.findMany({
+            where: {
+              customerId: customer.id,
+              createdAt: { lte: endDate },
+              NOT: { orderStatus: "CANCELED" },
+            },
+          });
+
+          const totalOrders = validOrders.length;
+          const totalPurchasedValue = validOrders.reduce((acc, o) => acc + o.finalAmount, 0);
+
+          // 2. Sum all payments (including negative refunds) up to this date
+          const paymentSum = await tx.payment.aggregate({
+            where: {
+              order: { customerId: customer.id },
+              paymentDate: { lte: endDate },
+            },
+            _sum: { amountPaid: true },
+          });
+
+          const totalPaid = paymentSum._sum.amountPaid || 0;
+          const totalDue = totalPurchasedValue - totalPaid; // Financial balance
+
+          // 3. Find the most recent successful order date
+          const latestOrder = await tx.order.findFirst({
+            where: {
+              customerId: customer.id,
+              createdAt: { lte: endDate },
+              NOT: { orderStatus: "CANCELED" },
+            },
+            orderBy: { createdAt: "desc" },
+            select: { createdAt: true },
+          });
+
+          await tx.customerSummarySnapshot.upsert({
+            where: { customerId_date: { customerId: customer.id, date: startDate } },
+            update: {
+              totalOrders,
+              totalPaid,
+              totalDue,
+              lastOrderAt: latestOrder?.createdAt || null,
+            },
+            create: {
+              customerId: customer.id,
+              date: startDate,
+              totalOrders,
+              totalPaid,
+              totalDue,
+              lastOrderAt: latestOrder?.createdAt || null,
+            },
+          });
+        },
+        {
+          maxWait: 5000,
+          timeout: 10000,
+        },
+      );
+    }
+
+    // NEW Section 4: Generate Global Daily Report for Dashboard Analytics
+    await prisma.$transaction(async (tx) => {
+      // A. Calculate Daily Sales (Orders placed today, not canceled)
+      const salesAgg = await tx.order.aggregate({
+        where: {
+          createdAt: { gte: startDate, lte: endDate },
+          NOT: { orderStatus: "CANCELED" },
+        },
+        _sum: { finalAmount: true },
+        _count: { id: true },
+      });
+
+      // B. Calculate Daily Revenue (Actual cash flow from payments)
+      const revenueAgg = await tx.payment.aggregate({
+        where: {
+          paymentDate: { gte: startDate, lte: endDate },
+        },
+        _sum: { amountPaid: true },
+      });
+
+      // C. Calculate Daily Expenses
+      const expenseAgg = await tx.expense.aggregate({
+        where: {
+          expenseDate: { gte: startDate, lte: endDate },
+        },
+        _sum: { amount: true },
+      });
+
+      // D. Calculate Production Stats
+      const productionAgg = await tx.productionBatch.aggregate({
+        where: {
+          productionDate: { gte: startDate, lte: endDate },
+        },
+        _sum: { producedKg: true },
+        _count: { id: true },
+      });
+
+      // E. Upsert into DailyReport table
+      await tx.dailyReport.upsert({
+        where: { date: startDate },
+        update: {
+          totalSales: salesAgg._sum.finalAmount || 0,
+          totalRevenue: revenueAgg._sum.amountPaid || 0,
+          totalExpenses: expenseAgg._sum.amount || 0,
+          totalOrders: salesAgg._count.id || 0,
+          totalProductionKg: productionAgg._sum.producedKg || 0,
+          totalBatches: productionAgg._count.id || 0,
+          totalRefunds: 0, // Will be handled if you want specific refund sum tracking
+        },
+        create: {
+          date: startDate,
+          totalSales: salesAgg._sum.finalAmount || 0,
+          totalRevenue: revenueAgg._sum.amountPaid || 0,
+          totalExpenses: expenseAgg._sum.amount || 0,
+          totalOrders: salesAgg._count.id || 0,
+          totalProductionKg: productionAgg._sum.producedKg || 0,
+          totalBatches: productionAgg._count.id || 0,
+        },
+      });
     });
-
-    const totalOrders = validOrders.length;
-    const totalPurchasedValue = validOrders.reduce((acc, o) => acc + o.finalAmount, 0);
-
-    // 2. Sum all payments (including negative refunds) up to this date
-    const paymentSum = await tx.payment.aggregate({
-      where: {
-        order: { customerId: customer.id },
-        paymentDate: { lte: endDate },
-      },
-      _sum: { amountPaid: true },
-    });
-
-    const totalPaid = paymentSum._sum.amountPaid || 0;
-    const totalDue = totalPurchasedValue - totalPaid; // Financial balance
-
-    // 3. Find the most recent successful order date
-    const latestOrder = await tx.order.findFirst({
-      where: {
-        customerId: customer.id,
-        createdAt: { lte: endDate },
-        NOT: { orderStatus: "CANCELED" },
-      },
-      orderBy: { createdAt: "desc" },
-      select: { createdAt: true }
-    });
-
-    await tx.customerSummarySnapshot.upsert({
-      where: { customerId_date: { customerId: customer.id, date: startDate } },
-      update: { 
-        totalOrders, 
-        totalPaid, 
-        totalDue,
-        lastOrderAt: latestOrder?.createdAt || null 
-      },
-      create: { 
-        customerId: customer.id, 
-        date: startDate, 
-        totalOrders, 
-        totalPaid, 
-        totalDue,
-        lastOrderAt: latestOrder?.createdAt || null 
-      },
-    });
-  }, {
-    maxWait: 5000,
-    timeout: 10000
-  });
-}
 
     console.log(`[Cron] Snapshots generated successfully for ${startDate.toDateString()}`);
   } catch (error) {
