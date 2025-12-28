@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Plus } from "lucide-react";
+import { Plus, RefreshCcw, AlertTriangle } from "lucide-react";
 
 // Modular Imports
 import { InventoryService } from "@/src/services/inventory.service";
@@ -18,10 +18,20 @@ export default function RawMaterialsPage() {
   const queryClient = useQueryClient();
 
   // Fetch Materials via Service
-  const { data: materials = [], isLoading } = useQuery({
+  const {
+    data: materials = [],
+    isLoading,
+    isFetching,
+    refetch,
+  } = useQuery({
     queryKey: ["raw-materials"],
     queryFn: InventoryService.getRawMaterials,
-    staleTime: 1000 * 60 * 5,
+    /** * FIX: Reduce staleTime so the app checks for backend changes more often.
+     * refetchOnMount: true ensures that every time you navigate to this page,
+     * it checks if the data is stale and updates it.
+     */
+    staleTime: 1000 * 5, // 5 seconds
+    refetchOnMount: true,
   });
 
   // Modal State
@@ -46,23 +56,40 @@ export default function RawMaterialsPage() {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 p-4 md:p-8">
       {/* Header Section */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h2 className="text-2xl font-bold tracking-tight text-zinc-900 dark:text-zinc-100">
-            Raw Material Inventory
-          </h2>
+          <div className="flex items-center gap-2">
+            <h2 className="text-2xl font-bold tracking-tight text-zinc-900 dark:text-zinc-100">
+              Raw Material Inventory
+            </h2>
+            {isFetching && (
+              <RefreshCcw className="w-4 h-4 animate-spin text-zinc-400" />
+            )}
+          </div>
           <p className="text-sm text-zinc-500 dark:text-zinc-400 mt-1">
             Track stock levels, replenish inventory, and manage material usage.
           </p>
         </div>
-        <button
-          onClick={() => setIsCreating(true)}
-          className="flex items-center gap-2 px-4 py-2 bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900 text-sm font-medium rounded-lg hover:opacity-90 shadow-sm transition-all"
-        >
-          <Plus className="w-4 h-4" /> Add Material
-        </button>
+
+        <div className="flex gap-2">
+          <button
+            onClick={() => refetch()}
+            className="p-2 text-zinc-500 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-lg transition-colors"
+            title="Force Refresh"
+          >
+            <RefreshCcw
+              className={`w-5 h-5 ${isFetching ? "animate-spin" : ""}`}
+            />
+          </button>
+          <button
+            onClick={() => setIsCreating(true)}
+            className="flex items-center gap-2 px-4 py-2 bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900 text-sm font-medium rounded-lg hover:opacity-90 shadow-sm transition-all"
+          >
+            <Plus className="w-4 h-4" /> Add Material
+          </button>
+        </div>
       </div>
 
       {/* Table Section */}
@@ -81,9 +108,21 @@ export default function RawMaterialsPage() {
             </thead>
             <tbody className="divide-y divide-zinc-100 dark:divide-zinc-800/50">
               {isLoading ? (
+                // Skeleton Loader
                 [...Array(5)].map((_, i) => (
-                  <tr key={i} className="animate-pulse h-16">
-                    <td colSpan={4} />
+                  <tr key={i} className="animate-pulse">
+                    <td className="px-6 py-4">
+                      <div className="h-4 bg-zinc-100 dark:bg-zinc-800 rounded w-24"></div>
+                    </td>
+                    <td className="px-6 py-4">
+                      <div className="h-4 bg-zinc-100 dark:bg-zinc-800 rounded w-12"></div>
+                    </td>
+                    <td className="px-6 py-4">
+                      <div className="h-4 bg-zinc-100 dark:bg-zinc-800 rounded w-16"></div>
+                    </td>
+                    <td className="px-6 py-4">
+                      <div className="h-8 bg-zinc-100 dark:bg-zinc-800 rounded w-full"></div>
+                    </td>
                   </tr>
                 ))
               ) : materials.length > 0 ? (
@@ -104,16 +143,18 @@ export default function RawMaterialsPage() {
                       <div className="flex items-center gap-2">
                         <span
                           className={`text-lg font-semibold ${
-                            m.currentStock < 0
+                            m.currentStock <= 0
                               ? "text-red-600"
+                              : m.currentStock < 100
+                              ? "text-amber-600" // Low stock warning
                               : "text-zinc-700 dark:text-zinc-300"
                           }`}
                         >
                           {m.currentStock.toLocaleString()}
                         </span>
-                        <span className="text-zinc-400 text-xs mt-1">
-                          {m.unit}
-                        </span>
+                        {m.currentStock < 100 && (
+                          <AlertTriangle className="w-4 h-4 text-amber-500" />
+                        )}
                       </div>
                     </td>
                     <td className="px-6 py-4 text-right flex justify-end gap-2">
@@ -156,7 +197,7 @@ export default function RawMaterialsPage() {
         </div>
       </div>
 
-      {/* Modals */}
+      {/* Modals Logic */}
       {isCreating && (
         <CreateRawMaterialModal
           onClose={() => setIsCreating(false)}
@@ -166,6 +207,7 @@ export default function RawMaterialsPage() {
           }}
         />
       )}
+
       {selectedMaterial && stockAction && (
         <StockActionModal
           material={selectedMaterial}
@@ -181,12 +223,14 @@ export default function RawMaterialsPage() {
           }}
         />
       )}
+
       {ledgerMaterial && (
         <LedgerModal
           material={ledgerMaterial}
           onClose={() => setLedgerMaterial(null)}
         />
       )}
+
       {adjustmentMaterial && (
         <AdjustmentModal
           material={adjustmentMaterial}
