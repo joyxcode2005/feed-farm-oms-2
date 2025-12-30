@@ -1,29 +1,37 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
-import { Plus, Search, Users, User, AlertCircle } from "lucide-react";
+import { Plus, Search, Users, User, AlertCircle, Printer, Loader2 } from "lucide-react";
+import { useReactToPrint } from "react-to-print";
+import toast from "react-hot-toast";
 
-// Modular Imports
+import { api } from "@/src/config";
 import { CustomerService } from "@/src/services/customer.service";
 import { Customer, CustomerSummary } from "@/src/types";
 import CreateCustomerModal from "@/src/components/CreateCustomerModal";
+import { CustomerBill } from "@/src/components/CustomerBill";
 
 export default function CustomersPage() {
   const router = useRouter();
   const [activeTab, setActiveTab] = useState<"all" | "ledger">("all");
   const [isCreating, setIsCreating] = useState(false);
   const [search, setSearch] = useState("");
+  
+  // Printing State
+  const printRef = useRef<HTMLDivElement>(null);
+  const [printData, setPrintData] = useState<{customer: any, orders: any[], summary: any} | null>(null);
+  const [printingId, setPrintingId] = useState<string | null>(null);
 
-  // 1. Fetch Customers via Service
+  // 1. Fetch Customers
   const { data: customers = [], isLoading: loadingCustomers } = useQuery({
     queryKey: ["customers"],
     queryFn: CustomerService.getAll,
     staleTime: 1000 * 60 * 5,
   });
 
-  // 2. Fetch Financial Ledger via Service
+  // 2. Fetch Financial Ledger Summary
   const { data: summaries = [], isLoading: loadingSummary } = useQuery({
     queryKey: ["customers-financial-summary"],
     queryFn: CustomerService.getFinancialSummary,
@@ -32,6 +40,42 @@ export default function CustomersPage() {
   });
 
   const isLoading = activeTab === "all" ? loadingCustomers : loadingSummary;
+
+  // Print Functionality
+  const reactToPrintFn = useReactToPrint({
+    contentRef: printRef,
+    documentTitle: `Customer_Bill_${printData?.customer?.name || 'Statement'}`,
+  });
+
+  const handleRowPrint = async (e: React.MouseEvent, customerId: string) => {
+    e.stopPropagation(); // Prevent navigating to detail page
+    setPrintingId(customerId);
+
+    try {
+      // Fetch full details for this specific customer on demand
+      const [custRes, ledgerRes] = await Promise.all([
+        api.get(`/customers/${customerId}`),
+        api.get(`/customers/${customerId}/ledger`)
+      ]);
+
+      setPrintData({
+        customer: custRes.data.data,
+        orders: ledgerRes.data.data.orders,
+        summary: ledgerRes.data.data.summary
+      });
+
+      // Allow React to render the hidden bill before printing
+      setTimeout(() => {
+        reactToPrintFn();
+        setPrintingId(null);
+      }, 100);
+
+    } catch (error) {
+      console.error(error);
+      toast.error("Failed to generate bill");
+      setPrintingId(null);
+    }
+  };
 
   // Filtering Logic
   const filteredCustomers = customers.filter(
@@ -73,7 +117,7 @@ export default function CustomersPage() {
           className={`pb-2 text-sm font-medium transition-colors relative ${
             activeTab === "all"
               ? "text-zinc-900 dark:text-zinc-100"
-              : "text-zinc-500"
+              : "text-zinc-500 dark:text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200"
           }`}
         >
           All Customers
@@ -86,7 +130,7 @@ export default function CustomersPage() {
           className={`pb-2 text-sm font-medium transition-colors relative ${
             activeTab === "ledger"
               ? "text-zinc-900 dark:text-zinc-100"
-              : "text-zinc-500"
+              : "text-zinc-500 dark:text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200"
           }`}
         >
           Customer Ledger
@@ -102,7 +146,7 @@ export default function CustomersPage() {
         <input
           type="text"
           placeholder="Search by name or phone..."
-          className="w-full sm:w-80 pl-9 pr-4 py-2 text-sm border border-zinc-200 dark:border-zinc-800 rounded-lg bg-white dark:bg-zinc-900 focus:ring-2 focus:ring-zinc-200 outline-none"
+          className="w-full sm:w-80 pl-9 pr-4 py-2 text-sm border border-zinc-200 dark:border-zinc-800 rounded-lg bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100 focus:ring-2 focus:ring-zinc-200 dark:focus:ring-zinc-800 outline-none placeholder:text-zinc-400"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
         />
@@ -114,7 +158,7 @@ export default function CustomersPage() {
             [...Array(6)].map((_, i) => (
               <div
                 key={i}
-                className="h-32 bg-zinc-100 dark:bg-zinc-900 rounded-xl animate-pulse"
+                className="h-32 bg-zinc-100 dark:bg-zinc-800 rounded-xl animate-pulse"
               />
             ))
           ) : filteredCustomers.length > 0 ? (
@@ -130,8 +174,8 @@ export default function CustomersPage() {
                   <div
                     className={`p-2 rounded-full ${
                       customer.type === "DISTRIBUTER"
-                        ? "bg-purple-100 text-purple-600"
-                        : "bg-blue-100 text-blue-600"
+                        ? "bg-purple-100 text-purple-600 dark:bg-purple-900/30 dark:text-purple-300"
+                        : "bg-blue-100 text-blue-600 dark:bg-blue-900/30 dark:text-blue-300"
                     }`}
                   >
                     {customer.type === "DISTRIBUTER" ? (
@@ -144,84 +188,95 @@ export default function CustomersPage() {
                     <h3 className="font-semibold text-zinc-900 dark:text-zinc-100">
                       {customer.name}
                     </h3>
-                    <p className="text-xs text-zinc-500 uppercase">
+                    <p className="text-xs text-zinc-500 dark:text-zinc-400 uppercase">
                       {customer.type}
                     </p>
                   </div>
                 </div>
                 <div className="space-y-1 text-sm text-zinc-600 dark:text-zinc-400 mt-3">
                   <p className="flex items-center gap-2">
-                    <span className="font-mono text-zinc-500 text-xs">PH:</span>{" "}
+                    <span className="font-mono text-zinc-500 dark:text-zinc-500 text-xs">PH:</span>{" "}
                     {customer.phone}
                   </p>
                 </div>
               </div>
             ))
           ) : (
-            <div className="col-span-full py-12 text-center text-zinc-500">
+            <div className="col-span-full py-12 text-center text-zinc-500 dark:text-zinc-400">
               No customers found.
             </div>
           )}
         </div>
       ) : (
+        // --- LEDGER TAB: Updated Columns & Print Button ---
         <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl overflow-hidden shadow-sm">
           <table className="w-full text-sm text-left">
             <thead className="bg-zinc-50 dark:bg-zinc-800/50 border-b border-zinc-200 dark:border-zinc-800">
               <tr>
-                <th className="px-6 py-4 font-medium text-zinc-500">
+                <th className="px-6 py-4 font-medium text-zinc-500 dark:text-zinc-400">
                   Customer Name
                 </th>
-                <th className="px-6 py-4 font-medium text-zinc-500 text-right">
-                  Total Purchased
-                </th>
-                <th className="px-6 py-4 font-medium text-zinc-500 text-right">
+                {/* REMOVED TOTAL PURCHASED COLUMN */}
+                <th className="px-6 py-4 font-medium text-zinc-500 dark:text-zinc-400 text-right">
                   Total Paid
                 </th>
-                <th className="px-6 py-4 font-medium text-zinc-500 text-right">
+                <th className="px-6 py-4 font-medium text-zinc-500 dark:text-zinc-400 text-right">
                   Outstanding
                 </th>
-                <th className="px-6 py-4 font-medium text-zinc-500">Status</th>
+                <th className="px-6 py-4 font-medium text-zinc-500 dark:text-zinc-400">Status</th>
+                <th className="px-6 py-4 font-medium text-zinc-500 dark:text-zinc-400 text-right">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-zinc-100 dark:divide-zinc-800">
               {isLoading ? (
                 <tr className="animate-pulse">
-                  <td colSpan={5} className="h-24 bg-zinc-50/50" />
+                  <td colSpan={5} className="h-24 bg-zinc-50/50 dark:bg-zinc-800/30" />
                 </tr>
               ) : (
                 filteredSummaries.map((item) => (
                   <tr
                     key={item.id}
-                    className="hover:bg-zinc-50/50 dark:hover:bg-zinc-800/50 cursor-pointer"
+                    className="hover:bg-zinc-50/50 dark:hover:bg-zinc-800/50 cursor-pointer transition-colors"
                     onClick={() =>
                       router.push(`/dashboard/customers/${item.id}`)
                     }
                   >
                     <td className="px-6 py-4 font-semibold text-zinc-900 dark:text-zinc-100">
                       {item.name}{" "}
-                      <span className="block text-xs font-normal text-zinc-500">
+                      <span className="block text-xs font-normal text-zinc-500 dark:text-zinc-400">
                         {item.phone}
                       </span>
                     </td>
-                    <td className="px-6 py-4 text-right">
-                      ₹{item.totalPurchased.toLocaleString()}
-                    </td>
-                    <td className="px-6 py-4 text-right text-emerald-600">
+                    <td className="px-6 py-4 text-right text-emerald-600 dark:text-emerald-400 font-medium">
                       ₹{item.totalPaid.toLocaleString()}
                     </td>
-                    <td className="px-6 py-4 text-right font-bold text-red-600">
+                    <td className="px-6 py-4 text-right font-bold text-red-600 dark:text-red-400">
                       ₹{item.totalOutstanding.toLocaleString()}
                     </td>
                     <td className="px-6 py-4">
                       {item.totalOutstanding > 0 ? (
-                        <span className="inline-flex items-center gap-1 text-xs font-medium text-amber-600 bg-amber-50 px-2 py-1 rounded">
+                        <span className="inline-flex items-center gap-1 text-xs font-medium text-amber-600 bg-amber-50 dark:text-amber-400 dark:bg-amber-900/30 px-2 py-1 rounded">
                           <AlertCircle className="w-3 h-3" /> Due
                         </span>
                       ) : (
-                        <span className="text-xs font-medium text-emerald-600 bg-emerald-50 px-2 py-1 rounded">
+                        <span className="text-xs font-medium text-emerald-600 bg-emerald-50 dark:text-emerald-400 dark:bg-emerald-900/30 px-2 py-1 rounded">
                           Clear
                         </span>
                       )}
+                    </td>
+                    <td className="px-6 py-4 text-right">
+                      <button
+                        onClick={(e) => handleRowPrint(e, item.id)}
+                        disabled={printingId === item.id}
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 text-zinc-700 dark:text-zinc-300 rounded text-xs font-medium transition-colors disabled:opacity-50"
+                      >
+                        {printingId === item.id ? (
+                          <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                        ) : (
+                          <Printer className="w-3.5 h-3.5" />
+                        )}
+                        Print Bill
+                      </button>
                     </td>
                   </tr>
                 ))
@@ -240,6 +295,18 @@ export default function CustomersPage() {
           }}
         />
       )}
+
+      {/* Hidden component for printing */}
+      <div className="hidden">
+        {printData && (
+          <CustomerBill
+            ref={printRef}
+            customer={printData.customer}
+            orders={printData.orders}
+            summary={printData.summary}
+          />
+        )}
+      </div>
     </div>
   );
 }

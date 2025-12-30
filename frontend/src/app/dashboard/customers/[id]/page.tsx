@@ -1,4 +1,4 @@
- /* eslint-disable @typescript-eslint/no-explicit-any */
+/* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
 import React, { useRef, useState } from "react";
@@ -7,7 +7,6 @@ import { api } from "@/src/config";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   ArrowLeft,
-  Package,
   Clock,
   IndianRupee,
   Phone,
@@ -51,6 +50,7 @@ interface Order {
 interface LedgerData {
   summary: {
     totalOrders: number;
+    totalPurchased: number;
     totalPaid: number;
     totalDue: number;
   };
@@ -71,7 +71,7 @@ export default function CustomerDetailPage({
   const router = useRouter();
   const queryClient = useQueryClient();
   const contentRef = useRef<HTMLDivElement>(null);
-  const [isEditModalOpen, setIsEditModalOpen] = useState(false); // State for modal
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
 
   const { data, isError, isLoading } = useQuery<DetailData>({
     refetchOnMount: true,
@@ -119,7 +119,7 @@ export default function CustomerDetailPage({
 
   const reactToPrintFn = useReactToPrint({
     contentRef,
-    documentTitle: `Customer_Statement_${customer?.name}_${new Date().toLocaleDateString()}`,
+    documentTitle: `Customer_Bill_${customer?.name}_${new Date().toLocaleDateString()}`,
   });
 
   const handlePrint = () => {
@@ -150,19 +150,18 @@ export default function CustomerDetailPage({
       <div className="flex items-center justify-between">
         <button
           onClick={() => router.push("/dashboard/customers")}
-          className="flex items-center gap-2 text-zinc-500 hover:text-zinc-900 transition-colors group"
+          className="flex items-center gap-2 text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100 transition-colors group"
         >
           <ArrowLeft className="w-4 h-4 group-hover:-translate-x-1 transition-transform" />
           Back to Customers
         </button>
 
         <div className="flex gap-3">
-          {/* New Update Button */}
           <button
             onClick={() => setIsEditModalOpen(true)}
-            className="flex items-center gap-2 px-4 py-2 bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 text-sm font-medium rounded-lg hover:bg-zinc-50 dark:hover:bg-zinc-700 transition-all shadow-sm"
+            className="flex items-center gap-2 px-4 py-2 bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 text-sm font-medium rounded-lg hover:bg-zinc-50 dark:hover:bg-zinc-700 text-zinc-700 dark:text-zinc-200 transition-all shadow-sm"
           >
-            <Edit2 className="w-4 h-4 text-zinc-500" />
+            <Edit2 className="w-4 h-4 text-zinc-500 dark:text-zinc-400" />
             Update Details
           </button>
 
@@ -172,7 +171,7 @@ export default function CustomerDetailPage({
             className="flex items-center gap-2 px-4 py-2 bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900 text-sm font-medium rounded-lg hover:opacity-90 disabled:opacity-50 transition-all shadow-sm"
           >
             <Printer className="w-4 h-4" />
-            Print Statement
+            Print Total Bill
           </button>
         </div>
       </div>
@@ -184,8 +183,8 @@ export default function CustomerDetailPage({
             <div
               className={`p-4 rounded-full ${
                 customer.type === "DISTRIBUTER"
-                  ? "bg-purple-100 text-purple-600 dark:bg-purple-900/30"
-                  : "bg-blue-100 text-blue-600 dark:bg-blue-900/30"
+                  ? "bg-purple-100 text-purple-600 dark:bg-purple-900/30 dark:text-purple-300"
+                  : "bg-blue-100 text-blue-600 dark:bg-blue-900/30 dark:text-blue-300"
               }`}
             >
               {customer.type === "DISTRIBUTER" ? (
@@ -198,7 +197,7 @@ export default function CustomerDetailPage({
               <h1 className="text-2xl font-bold text-zinc-900 dark:text-zinc-100">
                 {customer.name}
               </h1>
-              <div className="flex flex-wrap gap-4 mt-2 text-sm text-zinc-500">
+              <div className="flex flex-wrap gap-4 mt-2 text-sm text-zinc-500 dark:text-zinc-400">
                 <p className="flex items-center gap-1.5">
                   <Phone className="w-3.5 h-3.5" /> {customer.phone}
                 </p>
@@ -212,7 +211,7 @@ export default function CustomerDetailPage({
           <div className="flex flex-col gap-2 text-sm text-zinc-600 dark:text-zinc-400 border-t md:border-t-0 md:border-l border-zinc-100 dark:border-zinc-800 pt-4 md:pt-0 md:pl-6">
             <p className="flex items-center gap-2">
               <Building className="w-4 h-4 text-zinc-400" />
-              <span className="font-semibold uppercase text-[10px] tracking-wider text-zinc-400">
+              <span className="font-semibold uppercase text-[10px] tracking-wider text-zinc-400 dark:text-zinc-500">
                 District:
               </span>{" "}
               {customer.district || "N/A"}
@@ -228,36 +227,32 @@ export default function CustomerDetailPage({
       </div>
 
       {!ledger ? (
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          {[...Array(3)].map((_, i) => (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {[...Array(2)].map((_, i) => (
             <div key={i} className="h-28 bg-zinc-100 dark:bg-zinc-800 rounded-xl animate-pulse" />
           ))}
         </div>
       ) : (
         <>
-          {/* Summary Stats */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          {/* Summary Stats - 2 Columns (Purchased Removed) */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            
+            {/* Card 1: Total Paid */}
             <div className="p-6 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl shadow-sm">
-              <p className="text-sm font-medium text-zinc-500 flex items-center gap-2">
-                <Package className="w-4 h-4" /> Total Orders
-              </p>
-              <p className="text-3xl font-bold mt-2">
-                {ledger.summary.totalOrders}
-              </p>
-            </div>
-            <div className="p-6 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl shadow-sm">
-              <p className="text-sm font-medium text-green-600 flex items-center gap-2">
+              <p className="text-sm font-medium text-emerald-600 dark:text-emerald-400 flex items-center gap-2">
                 <IndianRupee className="w-4 h-4" /> Total Paid
               </p>
-              <p className="text-3xl font-bold mt-2 text-green-600">
+              <p className="text-3xl font-bold mt-2 text-emerald-600 dark:text-emerald-400">
                 ₹{ledger.summary.totalPaid.toLocaleString()}
               </p>
             </div>
+
+            {/* Card 2: Total Due */}
             <div className="p-6 bg-red-50 dark:bg-red-950/20 border border-red-100 dark:border-red-900/30 rounded-xl shadow-sm">
-              <p className="text-sm font-medium text-red-600 flex items-center gap-2">
+              <p className="text-sm font-medium text-red-600 dark:text-red-400 flex items-center gap-2">
                 <Clock className="w-4 h-4" /> Total Due
               </p>
-              <p className="text-3xl font-bold mt-2 text-red-600">
+              <p className="text-3xl font-bold mt-2 text-red-600 dark:text-red-400">
                 ₹{ledger.summary.totalDue.toLocaleString()}
               </p>
             </div>
@@ -270,13 +265,13 @@ export default function CustomerDetailPage({
             </div>
             <div className="overflow-x-auto">
               <table className="w-full text-left">
-                <thead className="bg-zinc-50 dark:bg-zinc-800/50 text-zinc-500 uppercase text-[10px] font-bold tracking-wider">
+                <thead className="bg-zinc-50 dark:bg-zinc-800/50 text-zinc-500 dark:text-zinc-400 uppercase text-[10px] font-bold tracking-wider">
                   <tr>
                     <th className="px-6 py-4">Date</th>
                     <th className="px-6 py-4">Order ID</th>
                     <th className="px-6 py-4 text-right">Amount</th>
-                    <th className="px-6 py-4 text-right text-green-600">Paid</th>
-                    <th className="px-6 py-4 text-right text-red-600">Due</th>
+                    <th className="px-6 py-4 text-right text-green-600 dark:text-green-400">Paid</th>
+                    <th className="px-6 py-4 text-right text-red-600 dark:text-red-400">Due</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-zinc-100 dark:divide-zinc-800">
@@ -285,10 +280,10 @@ export default function CustomerDetailPage({
                       <td className="px-6 py-4 text-sm text-zinc-600 dark:text-zinc-400">
                         {new Date(order.createdAt).toLocaleDateString()}
                       </td>
-                      <td className="px-6 py-4 font-mono text-xs">#{order.id.slice(-6).toUpperCase()}</td>
-                      <td className="px-6 py-4 text-sm text-right font-medium">₹{order.finalAmount.toLocaleString()}</td>
-                      <td className="px-6 py-4 text-sm text-right text-green-600">₹{order.paidAmount.toLocaleString()}</td>
-                      <td className="px-6 py-4 text-sm text-right font-bold text-red-600">₹{order.dueAmount.toLocaleString()}</td>
+                      <td className="px-6 py-4 font-mono text-xs text-zinc-500 dark:text-zinc-500">#{order.id.slice(-6).toUpperCase()}</td>
+                      <td className="px-6 py-4 text-sm text-right font-medium text-zinc-900 dark:text-zinc-100">₹{order.finalAmount.toLocaleString()}</td>
+                      <td className="px-6 py-4 text-sm text-right text-green-600 dark:text-green-400">₹{order.paidAmount.toLocaleString()}</td>
+                      <td className="px-6 py-4 text-sm text-right font-bold text-red-600 dark:text-red-400">₹{order.dueAmount.toLocaleString()}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -307,7 +302,6 @@ export default function CustomerDetailPage({
         </>
       )}
 
-      {/* Modal Connection */}
       {isEditModalOpen && customer && (
           <CustomerEditModal 
             customer={customer} 
