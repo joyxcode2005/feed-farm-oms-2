@@ -84,6 +84,8 @@ export const createCustomerSchema = z.object({
   type: z.enum(["SINGLE", "DISTRIBUTER"]).optional(),
   district: z.string(),
   createdByAdminId: z.string().uuid().optional(),
+  latitude: z.number().nullable().optional(),
+  longitude: z.number().nullable().optional(),
 });
 
 export const updateCustomerSchema = z.object({
@@ -92,6 +94,8 @@ export const updateCustomerSchema = z.object({
   address: z.string().optional(),
   type: z.enum(["SINGLE", "DISTRIBUTER"]).optional(),
   district: z.string(),
+  latitude: z.number().nullable().optional(),
+  longitude: z.number().nullable().optional(),
 });
 
 export const createOrderSchema = z.object({

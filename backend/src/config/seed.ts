@@ -21,9 +21,9 @@ async function main() {
     where: { email: "joysengupta252005@gmail.com" },
     update: { passwordHash: hashedPassword },
     create: {
-      name: "Joy Sengupta",
-      email: "joysengupta252005@gmail.com",
-      phone: "8777699459",
+      name: "Ayush Kirtania",
+      email: "ayushkirtania@gmail.com",
+      phone: "9836763794",
       passwordHash: hashedPassword,
       role: AdminRole.SUPER_ADMIN,
     },

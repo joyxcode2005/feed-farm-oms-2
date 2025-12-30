@@ -10,16 +10,19 @@ import {
   getCustomersByDistrict,
   getCustomerSnapshotsDB,
   updateCustomerDB,
-  getAllCustomersFinancialSummaryDB, // Imported new controller function
+  getAllCustomersFinancialSummaryDB,
 } from "../controllers/customer.controller";
 import { createCustomerSchema, updateCustomerSchema } from "../config/types";
+// FIX 1: Correct import name
+import { adminUserMiddleware } from "../middlewares/auth.middleware"; 
 
 const router = Router();
 
 /**
  * Route to create a new customer
  */
-router.post("/", async (req: Request, res: Response) => {
+// FIX 2: Use correct middleware name
+router.post("/", adminUserMiddleware, async (req: Request, res: Response) => {
   try {
     const parsed = createCustomerSchema.safeParse(req.body);
 
@@ -32,7 +35,13 @@ router.post("/", async (req: Request, res: Response) => {
     }
 
     try {
-      const customer = await createCustomerDB(parsed.data);
+      const customerData = {
+        ...parsed.data,
+        // FIX 3: Correctly access adminId from middleware
+        createdByAdminId: (req as any).adminId, 
+      };
+
+      const customer = await createCustomerDB(customerData);
 
       return res.status(201).json({
         success: true,
@@ -96,9 +105,7 @@ router.get("/phone", async (req: Request, res: Response) => {
 
 /**
  * New Route: Get financial summary for all customers
- * Placed before /:id to prevent conflicts
  */
-// NEW ROUTE: Get all customer totals
 router.get("/financial-summary", async (req: Request, res: Response) => {
   try {
     const summary = await getAllCustomersFinancialSummaryDB();
