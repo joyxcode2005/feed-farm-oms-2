@@ -89,7 +89,7 @@ export default function MapPage() {
 
         <div className="flex-1 overflow-y-auto p-4 space-y-3">
           {loading ? (
-            <div className="flex justify-center py-10"><Loader2 className="animate-spin text-zinc-400"/></div>
+            <div className="flex justify-center py-10"><Loader2 className="animate-spin text-zinc-400" /></div>
           ) : filteredCustomers.length === 0 && selectedDistrict ? (
             <p className="text-sm text-zinc-400 text-center">No customers found in this district.</p>
           ) : filteredCustomers.length === 0 ? (
@@ -114,15 +114,15 @@ export default function MapPage() {
                 <div className="mt-3 grid grid-cols-2 gap-2 pt-2 border-t border-zinc-200">
                   <div className="flex flex-col">
                     <span className="text-[10px] text-zinc-400 font-medium uppercase flex items-center gap-1">
-                      <IndianRupee className="w-3 h-3"/> Total Paid
+                      <IndianRupee className="w-3 h-3" /> Total Paid
                     </span>
                     <span className="text-xs font-bold text-emerald-600">
                       ₹{c.totalPaid.toLocaleString()}
                     </span>
                   </div>
                   <div className="flex flex-col items-end">
-                     <span className="text-[10px] text-zinc-400 font-medium uppercase flex items-center gap-1">
-                      <Package className="w-3 h-3"/> Orders
+                    <span className="text-[10px] text-zinc-400 font-medium uppercase flex items-center gap-1">
+                      <Package className="w-3 h-3" /> Orders
                     </span>
                     <span className="text-xs font-bold text-zinc-700">
                       {c.totalOrders}
@@ -142,7 +142,12 @@ export default function MapPage() {
       {/* Map Section */}
       <div className="flex-1 bg-zinc-100 relative">
         <MapContainer center={[22.9868, 87.855]} zoom={7} className="h-full w-full outline-none">
-          <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
+          <TileLayer
+            attribution='&copy; Google'
+            url="https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}" // 'm' is for standard roadmap
+          // Use "lyrs=s,h" for hybrid (satellite + landmarks) 
+          // Use "lyrs=y" for hybrid (better for landmarks)
+          />
 
           {/* District Boundaries */}
           {geoJsonData && (
@@ -167,7 +172,7 @@ export default function MapPage() {
                   const l = e.target;
                   // Only reset if not selected
                   if (feature.properties.district !== selectedDistrict) {
-                     l.setStyle({ weight: 1, fillOpacity: 0.1 });
+                    l.setStyle({ weight: 1, fillOpacity: 0.1 });
                   }
                 });
               }}
@@ -183,11 +188,11 @@ export default function MapPage() {
                   <div className="min-w-[150px]">
                     <h3 className="font-bold text-sm border-b pb-1 mb-1">{c.name}</h3>
                     <p className="text-xs text-zinc-500 mb-2">{c.address || c.district}</p>
-                    
+
                     <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs">
                       <span className="text-zinc-500">Total Paid:</span>
                       <span className="font-bold text-emerald-600 text-right">₹{c.totalPaid.toLocaleString()}</span>
-                      
+
                       <span className="text-zinc-500">Orders:</span>
                       <span className="font-bold text-zinc-700 text-right">{c.totalOrders}</span>
                     </div>
