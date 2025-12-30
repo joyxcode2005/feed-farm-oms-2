@@ -54,32 +54,32 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
       title: "Actual Revenue",
       value: `₹${stats?.totalRevenue.toLocaleString() || 0}`,
       subtitle: "Actual cash flow received",
-      icon: <IndianRupee className="text-green-600 w-6 h-6" />,
-      color: "bg-green-50",
+      icon: <IndianRupee className="text-green-600 dark:text-green-400 w-6 h-6" />,
+      color: "bg-green-50 dark:bg-green-900/20",
       targetPage: "Orders" as SidebarPageType,
     },
     {
       title: "Total Sales",
       value: `₹${stats?.totalSales.toLocaleString() || 0}`,
       subtitle: "Gross value of orders placed",
-      icon: <TrendingUp className="text-blue-600 w-6 h-6" />,
-      color: "bg-blue-50",
+      icon: <TrendingUp className="text-blue-600 dark:text-blue-400 w-6 h-6" />,
+      color: "bg-blue-50 dark:bg-blue-900/20",
       targetPage: "Orders" as SidebarPageType,
     },
     {
       title: "Total Expenses",
       value: `₹${stats?.totalExpenses.toLocaleString() || 0}`,
       subtitle: "Documented business spending",
-      icon: <TrendingDown className="text-red-600 w-6 h-6" />,
-      color: "bg-red-50",
+      icon: <TrendingDown className="text-red-600 dark:text-red-400 w-6 h-6" />,
+      color: "bg-red-50 dark:bg-red-900/20",
       targetPage: "Expenses" as SidebarPageType,
     },
     {
       title: "Feed Produced",
       value: `${stats?.totalProductionKg.toLocaleString() || 0} KG`,
       subtitle: `${stats?.totalBatches || 0} Production Batches`,
-      icon: <Factory className="text-purple-600 w-6 h-6" />,
-      color: "bg-purple-50",
+      icon: <Factory className="text-purple-600 dark:text-purple-400 w-6 h-6" />,
+      color: "bg-purple-50 dark:bg-purple-900/20",
       targetPage: "Finished Feed Stock" as SidebarPageType,
     },
   ];
@@ -89,10 +89,10 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
       {/* Header Section */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-gray-800">
+          <h1 className="text-2xl font-bold text-zinc-900 dark:text-zinc-100">
             Operational Overview
           </h1>
-          <p className="text-gray-500 text-sm">
+          <p className="text-zinc-500 dark:text-zinc-400 text-sm">
             Real-time performance metrics and financial summaries
           </p>
         </div>
@@ -100,7 +100,7 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
         <div className="flex items-center gap-3">
           <button
             onClick={fetchStats}
-            className="p-2 text-gray-500 hover:bg-gray-100 rounded-lg transition-colors"
+            className="p-2 text-zinc-500 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-lg transition-colors"
             title="Refresh Data"
           >
             <RefreshCcw
@@ -108,15 +108,15 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
             />
           </button>
 
-          <div className="flex bg-white border rounded-lg p-1 shadow-sm">
+          <div className="flex bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-lg p-1 shadow-sm">
             {(["day", "month", "year"] as const).map((p) => (
               <button
                 key={p}
                 onClick={() => setPeriod(p)}
                 className={`px-4 py-1.5 rounded-md text-sm font-medium transition-all ${
                   period === p
-                    ? "bg-zinc-900 text-white shadow-sm"
-                    : "text-gray-600 hover:bg-gray-50"
+                    ? "bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-900 shadow-sm"
+                    : "text-zinc-600 dark:text-zinc-400 hover:bg-zinc-50 dark:hover:bg-zinc-800"
                 }`}
               >
                 {p.charAt(0).toUpperCase() + p.slice(1)}
@@ -132,7 +132,7 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
           <div
             key={index}
             onClick={() => onNavigate && onNavigate(card.targetPage)}
-            className="bg-white p-6 rounded-2xl border shadow-sm hover:shadow-md transition-all cursor-pointer group"
+            className="bg-white dark:bg-zinc-900 p-6 rounded-2xl border border-zinc-200 dark:border-zinc-800 shadow-sm hover:shadow-md transition-all cursor-pointer group"
           >
             <div className="flex items-center justify-between mb-4">
               <div
@@ -140,22 +140,22 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
               >
                 {card.icon}
               </div>
-              <span className="text-xs font-bold text-gray-400 uppercase tracking-widest">
+              <span className="text-xs font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest">
                 {period}
               </span>
             </div>
             <div>
-              <h3 className="text-gray-500 text-sm font-medium">
+              <h3 className="text-zinc-500 dark:text-zinc-400 text-sm font-medium">
                 {card.title}
               </h3>
-              <div className="text-2xl font-bold text-gray-900 mt-1">
+              <div className="text-2xl font-bold text-zinc-900 dark:text-zinc-100 mt-1">
                 {loading ? (
-                  <div className="h-8 w-24 bg-gray-100 animate-pulse rounded" />
+                  <div className="h-8 w-24 bg-zinc-100 dark:bg-zinc-800 animate-pulse rounded" />
                 ) : (
                   card.value
                 )}
               </div>
-              <p className="text-xs text-gray-400 mt-1">{card.subtitle}</p>
+              <p className="text-xs text-zinc-400 dark:text-zinc-500 mt-1">{card.subtitle}</p>
             </div>
           </div>
         ))}
@@ -165,18 +165,18 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div
           onClick={() => onNavigate && onNavigate("Orders")}
-          className="lg:col-span-2 bg-white p-6 rounded-2xl border shadow-sm cursor-pointer hover:border-blue-200 transition-colors"
+          className="lg:col-span-2 bg-white dark:bg-zinc-900 p-6 rounded-2xl border border-zinc-200 dark:border-zinc-800 shadow-sm cursor-pointer hover:border-blue-200 dark:hover:border-blue-900 transition-colors"
         >
-          <h3 className="font-bold text-gray-800 mb-6">Volume Analysis</h3>
+          <h3 className="font-bold text-zinc-800 dark:text-zinc-100 mb-6">Volume Analysis</h3>
           <div className="flex items-center gap-6">
-            <div className="p-5 bg-blue-50 rounded-2xl">
-              <ShoppingCart className="text-blue-600 w-8 h-8" />
+            <div className="p-5 bg-blue-50 dark:bg-blue-900/20 rounded-2xl">
+              <ShoppingCart className="text-blue-600 dark:text-blue-400 w-8 h-8" />
             </div>
             <div>
-              <div className="text-4xl font-black text-gray-900">
+              <div className="text-4xl font-black text-zinc-900 dark:text-zinc-100">
                 {loading ? "..." : stats?.totalOrders || 0}
               </div>
-              <div className="text-sm font-medium text-gray-500 mt-1">
+              <div className="text-sm font-medium text-zinc-500 dark:text-zinc-400 mt-1">
                 Confirmed orders processed this {period}
               </div>
             </div>
@@ -184,7 +184,7 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
         </div>
 
         {/* Business Health Visualization */}
-        <div className="bg-linear-to-br from-blue-600 to-indigo-700 p-6 rounded-2xl shadow-lg text-white">
+        <div className="bg-linear-to-br from-blue-600 to-indigo-700 dark:from-blue-700 dark:to-indigo-900 p-6 rounded-2xl shadow-lg text-white">
           <h3 className="font-bold mb-2">Business Health</h3>
           <p className="text-blue-100 text-xs mb-4">
             Your revenue vs expense ratio for this {period} is currently being

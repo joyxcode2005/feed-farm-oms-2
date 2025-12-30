@@ -101,8 +101,6 @@ export default function CreateOrderModal({ onClose, onCreated }: CreateOrderModa
           setCustomerDistrict(cust.district);
           setCustomerAddress(cust.address || "");
           setCustomerType(cust.type || "SINGLE");
-          // Existing customer coordinates might not be returned by this specific API, 
-          // but we reset them to empty to avoid confusion
           setCustomerLatitude("");
           setCustomerLongitude("");
           setIsNewCustomer(false);
@@ -222,7 +220,6 @@ export default function CreateOrderModal({ onClose, onCreated }: CreateOrderModa
           district: customerDistrict,
           address: customerAddress,
           type: customerType,
-          // Include coordinates for new customer
           latitude: customerLatitude ? parseFloat(customerLatitude) : null,
           longitude: customerLongitude ? parseFloat(customerLongitude) : null,
         });
@@ -275,11 +272,11 @@ export default function CreateOrderModal({ onClose, onCreated }: CreateOrderModa
             
             <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
               <div className="col-span-full md:col-span-1">
-                <label className="block text-xs font-medium text-zinc-500 mb-1">Phone Number</label>
+                <label className="block text-xs font-medium text-zinc-500 dark:text-zinc-400 mb-1">Phone Number</label>
                 <div className="relative">
                   <input 
                     type="tel"
-                    className={`w-full pl-3 pr-10 py-2 rounded-lg border bg-white dark:bg-zinc-800 outline-none transition-colors ${
+                    className={`w-full pl-3 pr-10 py-2 rounded-lg border bg-white dark:bg-zinc-800 dark:text-white outline-none transition-colors ${
                       selectedCustomerId 
                         ? "border-green-500 ring-1 ring-green-500/20" 
                         : "border-zinc-300 dark:border-zinc-700 focus:ring-2 focus:ring-indigo-500"
@@ -300,18 +297,18 @@ export default function CreateOrderModal({ onClose, onCreated }: CreateOrderModa
                   </div>
                 </div>
                 {selectedCustomerId && !checkingPhone && (
-                  <p className="text-xs text-green-600 mt-1.5 font-medium">Existing customer found!</p>
+                  <p className="text-xs text-green-600 dark:text-green-400 mt-1.5 font-medium">Existing customer found!</p>
                 )}
                 {isNewCustomer && !checkingPhone && phoneSearch.length > 3 && (
-                  <p className="text-xs text-blue-600 mt-1.5 font-medium">New customer? Fill details below.</p>
+                  <p className="text-xs text-blue-600 dark:text-blue-400 mt-1.5 font-medium">New customer? Fill details below.</p>
                 )}
               </div>
 
               <div>
-                <label className="block text-xs font-medium text-zinc-500 mb-1">Customer Name</label>
+                <label className="block text-xs font-medium text-zinc-500 dark:text-zinc-400 mb-1">Customer Name</label>
                 <input 
                   type="text"
-                  className="w-full px-3 py-2 rounded-lg border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 disabled:bg-zinc-100 dark:disabled:bg-zinc-800/50 disabled:text-zinc-500"
+                  className="w-full px-3 py-2 rounded-lg border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white disabled:bg-zinc-100 dark:disabled:bg-zinc-800/50 disabled:text-zinc-500"
                   placeholder="Customer Name"
                   value={customerName}
                   onChange={(e) => setCustomerName(e.target.value)}
@@ -322,9 +319,9 @@ export default function CreateOrderModal({ onClose, onCreated }: CreateOrderModa
 
               <div className={`col-span-full grid grid-cols-1 md:grid-cols-2 gap-5 transition-all duration-300 ${isNewCustomer || selectedCustomerId ? 'opacity-100 max-h-96' : 'opacity-0 max-h-0 hidden'}`}>
                  <div>
-                    <label className="block text-xs font-medium text-zinc-500 mb-1">District</label>
+                    <label className="block text-xs font-medium text-zinc-500 dark:text-zinc-400 mb-1">District</label>
                     <select 
-                        className="w-full px-3 py-2 rounded-lg border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 disabled:bg-zinc-100 disabled:text-zinc-500"
+                        className="w-full px-3 py-2 rounded-lg border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white disabled:bg-zinc-100 dark:disabled:bg-zinc-800/50 disabled:text-zinc-500"
                         value={customerDistrict}
                         onChange={(e) => setCustomerDistrict(e.target.value)}
                         disabled={!!selectedCustomerId}
@@ -337,9 +334,9 @@ export default function CreateOrderModal({ onClose, onCreated }: CreateOrderModa
                     </select>
                  </div>
                  <div>
-                    <label className="block text-xs font-medium text-zinc-500 mb-1">Customer Type</label>
+                    <label className="block text-xs font-medium text-zinc-500 dark:text-zinc-400 mb-1">Customer Type</label>
                     <select 
-                      className="w-full px-3 py-2 rounded-lg border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 disabled:bg-zinc-100 disabled:text-zinc-500"
+                      className="w-full px-3 py-2 rounded-lg border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white disabled:bg-zinc-100 dark:disabled:bg-zinc-800/50 disabled:text-zinc-500"
                       value={customerType}
                       onChange={(e) => setCustomerType(e.target.value)}
                       disabled={!!selectedCustomerId}
@@ -349,10 +346,10 @@ export default function CreateOrderModal({ onClose, onCreated }: CreateOrderModa
                     </select>
                  </div>
                  <div className="col-span-full">
-                    <label className="block text-xs font-medium text-zinc-500 mb-1">Address (Optional)</label>
+                    <label className="block text-xs font-medium text-zinc-500 dark:text-zinc-400 mb-1">Address (Optional)</label>
                     <input 
                       type="text"
-                      className="w-full px-3 py-2 rounded-lg border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 disabled:bg-zinc-100 disabled:text-zinc-500"
+                      className="w-full px-3 py-2 rounded-lg border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white disabled:bg-zinc-100 dark:disabled:bg-zinc-800/50 disabled:text-zinc-500"
                       value={customerAddress}
                       onChange={(e) => setCustomerAddress(e.target.value)}
                       disabled={!!selectedCustomerId}
@@ -360,7 +357,7 @@ export default function CreateOrderModal({ onClose, onCreated }: CreateOrderModa
                     />
                  </div>
 
-                 {/* NEW: Map Location Section (Only visible for New Customers) */}
+                 {/* NEW: Map Location Section (Dark Mode Fixed) */}
                  {isNewCustomer && (
                    <div className="col-span-full p-3 bg-white dark:bg-zinc-800 rounded-lg border border-zinc-200 dark:border-zinc-700">
                       <div className="flex justify-between items-center mb-3">
@@ -369,7 +366,7 @@ export default function CreateOrderModal({ onClose, onCreated }: CreateOrderModa
                           type="button"
                           onClick={handleAutoLocation}
                           disabled={geoLoading || !customerDistrict}
-                          className="text-xs flex items-center gap-1 bg-blue-50 text-blue-600 px-2 py-1 rounded hover:bg-blue-100 disabled:opacity-50"
+                          className="text-xs flex items-center gap-1 bg-blue-50 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400 px-2 py-1 rounded hover:bg-blue-100 dark:hover:bg-blue-900/50 disabled:opacity-50"
                         >
                           {geoLoading ? <Loader2 className="w-3 h-3 animate-spin" /> : <MapPin className="w-3 h-3" />}
                           Auto-Detect
@@ -380,7 +377,7 @@ export default function CreateOrderModal({ onClose, onCreated }: CreateOrderModa
                           type="number"
                           step="any"
                           placeholder="Latitude"
-                          className="w-full px-2 py-1.5 text-xs rounded border border-zinc-300 dark:border-zinc-600 bg-white dark:bg-zinc-900"
+                          className="w-full px-2 py-1.5 text-xs rounded border border-zinc-300 dark:border-zinc-600 bg-white dark:bg-zinc-900 text-zinc-900 dark:text-white"
                           value={customerLatitude}
                           onChange={(e) => setCustomerLatitude(e.target.value)}
                         />
@@ -388,7 +385,7 @@ export default function CreateOrderModal({ onClose, onCreated }: CreateOrderModa
                           type="number"
                           step="any"
                           placeholder="Longitude"
-                          className="w-full px-2 py-1.5 text-xs rounded border border-zinc-300 dark:border-zinc-600 bg-white dark:bg-zinc-900"
+                          className="w-full px-2 py-1.5 text-xs rounded border border-zinc-300 dark:border-zinc-600 bg-white dark:bg-zinc-900 text-zinc-900 dark:text-white"
                           value={customerLongitude}
                           onChange={(e) => setCustomerLongitude(e.target.value)}
                         />
@@ -401,7 +398,6 @@ export default function CreateOrderModal({ onClose, onCreated }: CreateOrderModa
 
           {/* Section 2: Order Details */}
           <div className="space-y-4">
-             {/* ... (Rest of the order form remains unchanged) ... */}
              <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                 <div>
                   <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1">Delivery Date</label>
@@ -409,7 +405,7 @@ export default function CreateOrderModal({ onClose, onCreated }: CreateOrderModa
                     <Calendar className="absolute left-3 top-2.5 w-4 h-4 text-zinc-400" />
                     <input 
                       type="date"
-                      className="w-full pl-9 pr-3 py-2 rounded-lg border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800"
+                      className="w-full pl-9 pr-3 py-2 rounded-lg border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white"
                       value={deliveryDate}
                       onChange={(e) => setDeliveryDate(e.target.value)}
                       required
@@ -424,7 +420,7 @@ export default function CreateOrderModal({ onClose, onCreated }: CreateOrderModa
                   <div className="relative">
                     <Filter className="absolute left-3 top-2.5 w-4 h-4 text-zinc-400" />
                     <select 
-                      className="w-full pl-9 pr-3 py-2 rounded-lg border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800"
+                      className="w-full pl-9 pr-3 py-2 rounded-lg border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white"
                       value={selectedAnimalType}
                       onChange={(e) => setSelectedAnimalType(e.target.value)}
                     >
@@ -443,7 +439,7 @@ export default function CreateOrderModal({ onClose, onCreated }: CreateOrderModa
              <div className="space-y-3 pt-2">
                 <div className="flex justify-between items-center">
                   <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300">Order Items</label>
-                  <button type="button" onClick={addItem} className="text-xs flex items-center gap-1 text-indigo-600 hover:text-indigo-700 font-medium bg-indigo-50 px-2 py-1 rounded">
+                  <button type="button" onClick={addItem} className="text-xs flex items-center gap-1 text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 font-medium bg-indigo-50 dark:bg-indigo-900/30 px-2 py-1 rounded">
                     <Plus className="w-3 h-3" /> Add Item
                   </button>
                 </div>
@@ -452,10 +448,10 @@ export default function CreateOrderModal({ onClose, onCreated }: CreateOrderModa
                   <table className="w-full text-sm">
                     <thead className="bg-zinc-50 dark:bg-zinc-800/50">
                       <tr>
-                        <th className="px-4 py-2 text-left font-medium text-zinc-500">Item</th>
-                        <th className="px-4 py-2 text-left font-medium text-zinc-500 w-24">Bags</th>
-                        <th className="px-4 py-2 text-left font-medium text-zinc-500 w-32">Price/Bag</th>
-                        <th className="px-4 py-2 text-right font-medium text-zinc-500 w-28">Total</th>
+                        <th className="px-4 py-2 text-left font-medium text-zinc-500 dark:text-zinc-400">Item</th>
+                        <th className="px-4 py-2 text-left font-medium text-zinc-500 dark:text-zinc-400 w-24">Bags</th>
+                        <th className="px-4 py-2 text-left font-medium text-zinc-500 dark:text-zinc-400 w-32">Price/Bag</th>
+                        <th className="px-4 py-2 text-right font-medium text-zinc-500 dark:text-zinc-400 w-28">Total</th>
                         <th className="px-4 py-2 w-10"></th>
                       </tr>
                     </thead>
@@ -464,14 +460,14 @@ export default function CreateOrderModal({ onClose, onCreated }: CreateOrderModa
                         <tr key={idx}>
                           <td className="p-2">
                             <select 
-                              className="w-full px-2 py-1.5 rounded border border-zinc-200 dark:border-zinc-700 bg-transparent"
+                              className="w-full px-2 py-1.5 rounded border border-zinc-200 dark:border-zinc-700 bg-transparent text-zinc-900 dark:text-zinc-200"
                               value={item.feedCategoryId}
                               onChange={(e) => handleItemChange(idx, 'feedCategoryId', e.target.value)}
                               required
                             >
-                              <option value="">Select Feed</option>
+                              <option value="" className="dark:bg-zinc-800">Select Feed</option>
                               {filteredFeedCategories.map(f => (
-                                <option key={f.id} value={f.id}>
+                                <option key={f.id} value={f.id} className="dark:bg-zinc-800">
                                   {f.name} {!selectedAnimalType && `(${f.animalType.name})`}
                                 </option>
                               ))}
@@ -481,7 +477,7 @@ export default function CreateOrderModal({ onClose, onCreated }: CreateOrderModa
                             <input 
                               type="number" 
                               min="1"
-                              className="w-full px-2 py-1.5 rounded border border-zinc-200 dark:border-zinc-700 bg-transparent"
+                              className="w-full px-2 py-1.5 rounded border border-zinc-200 dark:border-zinc-700 bg-transparent text-zinc-900 dark:text-zinc-200"
                               value={item.quantityBags}
                               onChange={(e) => handleItemChange(idx, 'quantityBags', Number(e.target.value))}
                             />
@@ -490,7 +486,7 @@ export default function CreateOrderModal({ onClose, onCreated }: CreateOrderModa
                             <input 
                               type="number" 
                               min="0"
-                              className="w-full px-2 py-1.5 rounded border border-zinc-200 dark:border-zinc-700 bg-transparent"
+                              className="w-full px-2 py-1.5 rounded border border-zinc-200 dark:border-zinc-700 bg-transparent text-zinc-900 dark:text-zinc-200"
                               value={item.pricePerBag}
                               onChange={(e) => handleItemChange(idx, 'pricePerBag', Number(e.target.value))}
                             />
@@ -520,7 +516,7 @@ export default function CreateOrderModal({ onClose, onCreated }: CreateOrderModa
                    
                    <div className="flex items-center gap-2">
                       <select 
-                        className="w-32 text-xs px-2 py-1.5 rounded border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800"
+                        className="w-32 text-xs px-2 py-1.5 rounded border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white"
                         value={discountType}
                         onChange={(e) => {
                           const type = e.target.value as any;
@@ -535,7 +531,7 @@ export default function CreateOrderModal({ onClose, onCreated }: CreateOrderModa
                       <input 
                         type="number" 
                         min="0"
-                        className="flex-1 text-xs px-2 py-1.5 rounded border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 disabled:opacity-50 disabled:bg-zinc-100 dark:disabled:bg-zinc-800/50"
+                        className="flex-1 text-xs px-2 py-1.5 rounded border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white disabled:opacity-50 disabled:bg-zinc-100 dark:disabled:bg-zinc-800/50"
                         placeholder="Value"
                         value={discountValue}
                         onChange={(e) => setDiscountValue(Number(e.target.value))}

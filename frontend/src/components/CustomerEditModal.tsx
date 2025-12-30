@@ -91,7 +91,7 @@ export default function CustomerEditModal({
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
       <div className="bg-white dark:bg-zinc-900 rounded-xl shadow-xl w-full max-w-md border border-zinc-200 dark:border-zinc-800 max-h-[90vh] overflow-y-auto">
         <div className="flex justify-between items-center p-5 border-b border-zinc-100 dark:border-zinc-800">
-          <h3 className="text-lg font-semibold">Update Customer Details</h3>
+          <h3 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100">Update Customer Details</h3>
           <button onClick={onClose} className="text-zinc-400 hover:text-zinc-600">
             <X className="w-5 h-5" />
           </button>
@@ -99,10 +99,10 @@ export default function CustomerEditModal({
 
         <form onSubmit={handleSubmit} className="p-5 space-y-4">
           <div>
-            <label className="block text-sm font-medium mb-1">Name</label>
+            <label className="block text-sm font-medium mb-1 text-zinc-700 dark:text-zinc-300">Name</label>
             <input
               required
-              className="w-full px-3 py-2 rounded-lg border dark:bg-zinc-800 border-zinc-300 dark:border-zinc-700"
+              className="w-full px-3 py-2 rounded-lg border bg-white dark:bg-zinc-800 border-zinc-300 dark:border-zinc-700 text-zinc-900 dark:text-white"
               value={form.name}
               onChange={(e) => setForm({ ...form, name: e.target.value })}
             />
@@ -110,18 +110,18 @@ export default function CustomerEditModal({
 
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium mb-1">Phone</label>
+              <label className="block text-sm font-medium mb-1 text-zinc-700 dark:text-zinc-300">Phone</label>
               <input
                 required
-                className="w-full px-3 py-2 rounded-lg border dark:bg-zinc-800 border-zinc-300 dark:border-zinc-700"
+                className="w-full px-3 py-2 rounded-lg border bg-white dark:bg-zinc-800 border-zinc-300 dark:border-zinc-700 text-zinc-900 dark:text-white"
                 value={form.phone}
                 onChange={(e) => setForm({ ...form, phone: e.target.value })}
               />
             </div>
             <div>
-              <label className="block text-sm font-medium mb-1">Type</label>
+              <label className="block text-sm font-medium mb-1 text-zinc-700 dark:text-zinc-300">Type</label>
               <select
-                className="w-full px-3 py-2 rounded-lg border dark:bg-zinc-800 border-zinc-300 dark:border-zinc-700"
+                className="w-full px-3 py-2 rounded-lg border bg-white dark:bg-zinc-800 border-zinc-300 dark:border-zinc-700 text-zinc-900 dark:text-white"
                 value={form.type}
                 onChange={(e) => setForm({ ...form, type: e.target.value })}
               >
@@ -132,9 +132,9 @@ export default function CustomerEditModal({
           </div>
 
           <div>
-            <label className="block text-sm font-medium mb-1">District</label>
+            <label className="block text-sm font-medium mb-1 text-zinc-700 dark:text-zinc-300">District</label>
             <select
-              className="w-full px-3 py-2 rounded-lg border dark:bg-zinc-800 border-zinc-300 dark:border-zinc-700"
+              className="w-full px-3 py-2 rounded-lg border bg-white dark:bg-zinc-800 border-zinc-300 dark:border-zinc-700 text-zinc-900 dark:text-white"
               value={form.district}
               onChange={(e) => setForm({ ...form, district: e.target.value })}
             >
@@ -145,15 +145,15 @@ export default function CustomerEditModal({
           </div>
 
           <div>
-            <label className="block text-sm font-medium mb-1">Address</label>
+            <label className="block text-sm font-medium mb-1 text-zinc-700 dark:text-zinc-300">Address</label>
             <textarea
-              className="w-full px-3 py-2 rounded-lg border dark:bg-zinc-800 border-zinc-300 dark:border-zinc-700"
+              className="w-full px-3 py-2 rounded-lg border bg-white dark:bg-zinc-800 border-zinc-300 dark:border-zinc-700 text-zinc-900 dark:text-white"
               value={form.address}
               onChange={(e) => setForm({ ...form, address: e.target.value })}
             />
           </div>
 
-          {/* New Location Section */}
+          {/* New Location Section - Dark Mode */}
           <div className="p-3 bg-zinc-50 dark:bg-zinc-800/50 rounded-lg border border-zinc-200 dark:border-zinc-700">
             <div className="flex justify-between items-center mb-3">
               <span className="text-sm font-medium text-zinc-700 dark:text-zinc-300">Map Location</span>
@@ -161,7 +161,7 @@ export default function CustomerEditModal({
                 type="button"
                 onClick={handleAutoLocation}
                 disabled={geoLoading || !form.district}
-                className="text-xs flex items-center gap-1 bg-blue-100 text-blue-700 px-2 py-1 rounded hover:bg-blue-200 disabled:opacity-50"
+                className="text-xs flex items-center gap-1 bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300 px-2 py-1 rounded hover:bg-blue-200 dark:hover:bg-blue-900/50 disabled:opacity-50"
               >
                 {geoLoading ? <Loader2 className="w-3 h-3 animate-spin" /> : <MapPin className="w-3 h-3" />}
                 Auto-Detect
@@ -173,7 +173,7 @@ export default function CustomerEditModal({
                   type="number"
                   step="any"
                   placeholder="Latitude"
-                  className="w-full px-2 py-1 text-sm rounded border border-zinc-300 dark:border-zinc-600 bg-white dark:bg-zinc-800"
+                  className="w-full px-2 py-1 text-sm rounded border border-zinc-300 dark:border-zinc-600 bg-white dark:bg-zinc-900 text-zinc-900 dark:text-white"
                   value={form.latitude}
                   onChange={(e) => setForm({ ...form, latitude: e.target.value })}
                 />
@@ -183,7 +183,7 @@ export default function CustomerEditModal({
                   type="number"
                   step="any"
                   placeholder="Longitude"
-                  className="w-full px-2 py-1 text-sm rounded border border-zinc-300 dark:border-zinc-600 bg-white dark:bg-zinc-800"
+                  className="w-full px-2 py-1 text-sm rounded border border-zinc-300 dark:border-zinc-600 bg-white dark:bg-zinc-900 text-zinc-900 dark:text-white"
                   value={form.longitude}
                   onChange={(e) => setForm({ ...form, longitude: e.target.value })}
                 />

@@ -12,7 +12,6 @@ export default function ExpensesPage() {
   const [isInitialLoading, setIsInitialLoading] = useState(true);
 
   // Wrap fetchExpenses in useCallback so it can be safely used in useEffect
-  // and passed to child components without causing re-renders.
   const fetchExpenses = useCallback(async () => {
     try {
       const data = await ExpenseService.getAll();
@@ -24,7 +23,6 @@ export default function ExpensesPage() {
     }
   }, []);
 
-  // Use the stable function in the effect
   useEffect(() => {
     fetchExpenses();
   }, [fetchExpenses]);
@@ -43,28 +41,28 @@ export default function ExpensesPage() {
   const totalExpenses = expenses.reduce((acc, curr) => acc + curr.amount, 0);
 
   return (
-    <div className="p-6 space-y-6">
+    <div className="space-y-6">
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-2xl font-bold">Business Expenses</h1>
-          <p className="text-zinc-500">Track all costs and overheads</p>
+          <h1 className="text-2xl font-bold text-zinc-900 dark:text-zinc-100">Business Expenses</h1>
+          <p className="text-zinc-500 dark:text-zinc-400">Track all costs and overheads</p>
         </div>
         <button 
           onClick={() => setIsModalOpen(true)}
-          className="flex items-center gap-2 bg-zinc-900 text-white px-4 py-2 rounded-lg hover:bg-zinc-800 transition-colors"
+          className="flex items-center gap-2 bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-900 px-4 py-2 rounded-lg hover:bg-zinc-800 dark:hover:bg-zinc-200 transition-colors"
         >
           <Plus size={20} /> Add Expense
         </button>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <div className="p-4 bg-white border rounded-xl shadow-sm">
-          <p className="text-sm text-zinc-500">Total Expenses</p>
-          <p className="text-2xl font-bold text-red-600">₹{totalExpenses.toLocaleString()}</p>
+        <div className="p-4 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl shadow-sm">
+          <p className="text-sm text-zinc-500 dark:text-zinc-400">Total Expenses</p>
+          <p className="text-2xl font-bold text-red-600 dark:text-red-400">₹{totalExpenses.toLocaleString()}</p>
         </div>
       </div>
 
-      <div className="bg-white border rounded-xl overflow-hidden shadow-sm">
+      <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl overflow-hidden shadow-sm">
         {isInitialLoading ? (
           <div className="flex items-center justify-center h-64">
             <Loader2 className="w-8 h-8 animate-spin text-zinc-400" />
@@ -72,7 +70,7 @@ export default function ExpensesPage() {
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-left border-collapse">
-              <thead className="bg-zinc-50 border-b text-sm font-medium text-zinc-500">
+              <thead className="bg-zinc-50 dark:bg-zinc-800/50 border-b border-zinc-200 dark:border-zinc-800 text-sm font-medium text-zinc-500 dark:text-zinc-400">
                 <tr>
                   <th className="px-6 py-4">Date</th>
                   <th className="px-6 py-4">Category</th>
@@ -81,24 +79,24 @@ export default function ExpensesPage() {
                   <th className="px-6 py-4 text-center">Actions</th>
                 </tr>
               </thead>
-              <tbody className="divide-y text-sm">
+              <tbody className="divide-y divide-zinc-200 dark:divide-zinc-800 text-sm">
                 {expenses.length === 0 ? (
                   <tr>
-                    <td colSpan={5} className="px-6 py-12 text-center text-zinc-500">
+                    <td colSpan={5} className="px-6 py-12 text-center text-zinc-500 dark:text-zinc-400">
                       No expenses found.
                     </td>
                   </tr>
                 ) : (
                   expenses.map((expense) => (
-                    <tr key={expense.id} className="hover:bg-zinc-50">
-                      <td className="px-6 py-4">{new Date(expense.expenseDate).toLocaleDateString()}</td>
-                      <td className="px-6 py-4 font-medium">{expense.category}</td>
-                      <td className="px-6 py-4 text-zinc-500 max-w-xs truncate">{expense.note || "-"}</td>
-                      <td className="px-6 py-4 text-right font-bold text-red-600">₹{expense.amount.toLocaleString()}</td>
+                    <tr key={expense.id} className="hover:bg-zinc-50 dark:hover:bg-zinc-800/30 transition-colors">
+                      <td className="px-6 py-4 text-zinc-600 dark:text-zinc-300">{new Date(expense.expenseDate).toLocaleDateString()}</td>
+                      <td className="px-6 py-4 font-medium text-zinc-900 dark:text-zinc-100">{expense.category}</td>
+                      <td className="px-6 py-4 text-zinc-500 dark:text-zinc-400 max-w-xs truncate">{expense.note || "-"}</td>
+                      <td className="px-6 py-4 text-right font-bold text-red-600 dark:text-red-400">₹{expense.amount.toLocaleString()}</td>
                       <td className="px-6 py-4 text-center">
                         <button 
                           onClick={() => handleDelete(expense.id)} 
-                          className="p-2 text-zinc-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                          className="p-2 text-zinc-400 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
                         >
                           <Trash2 size={18} />
                         </button>

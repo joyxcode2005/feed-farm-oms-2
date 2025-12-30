@@ -62,7 +62,7 @@ export default function CreateExpenseModal({ onClose, onSuccess }: Props) {
           <h3 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100">
             Record New Expense
           </h3>
-          <button onClick={onClose} className="text-zinc-400 hover:text-zinc-600">
+          <button onClick={onClose} className="text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200">
             <X className="w-5 h-5" />
           </button>
         </div>
@@ -74,7 +74,7 @@ export default function CreateExpenseModal({ onClose, onSuccess }: Props) {
             </label>
             <div className="space-y-2">
               <select
-                className="w-full px-3 py-2 rounded-lg border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800"
+                className="w-full px-3 py-2 rounded-lg border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white"
                 value={formData.category}
                 onChange={(e) => setFormData({ ...formData, category: e.target.value })}
                 required
@@ -86,10 +86,11 @@ export default function CreateExpenseModal({ onClose, onSuccess }: Props) {
                 <option value="CUSTOM">-- Custom Category --</option>
               </select>
               
-              {formData.category === "CUSTOM" || !COMMON_CATEGORIES.includes(formData.category) && formData.category !== "" ? (
+              {formData.category === "CUSTOM" || (!COMMON_CATEGORIES.includes(formData.category) && formData.category !== "") ? (
                 <input
                   placeholder="Enter custom category name"
-                  className="w-full px-3 py-2 rounded-lg border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800"
+                  className="w-full px-3 py-2 rounded-lg border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white"
+                  value={formData.category === "CUSTOM" ? "" : formData.category}
                   onChange={(e) => setFormData({ ...formData, category: e.target.value })}
                   required
                 />
@@ -107,7 +108,7 @@ export default function CreateExpenseModal({ onClose, onSuccess }: Props) {
                 type="number"
                 min="0.01"
                 step="0.01"
-                className="w-full px-3 py-2 rounded-lg border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800"
+                className="w-full px-3 py-2 rounded-lg border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white"
                 value={formData.amount}
                 onChange={(e) => setFormData({ ...formData, amount: e.target.value })}
                 placeholder="0.00"
@@ -120,7 +121,7 @@ export default function CreateExpenseModal({ onClose, onSuccess }: Props) {
               <input
                 required
                 type="date"
-                className="w-full px-3 py-2 rounded-lg border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800"
+                className="w-full px-3 py-2 rounded-lg border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white"
                 value={formData.expenseDate}
                 onChange={(e) => setFormData({ ...formData, expenseDate: e.target.value })}
               />
@@ -133,7 +134,7 @@ export default function CreateExpenseModal({ onClose, onSuccess }: Props) {
             </label>
             <textarea
               rows={2}
-              className="w-full px-3 py-2 rounded-lg border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800"
+              className="w-full px-3 py-2 rounded-lg border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white"
               value={formData.note}
               onChange={(e) => setFormData({ ...formData, note: e.target.value })}
               placeholder="E.g. Paid for raw material transport"
