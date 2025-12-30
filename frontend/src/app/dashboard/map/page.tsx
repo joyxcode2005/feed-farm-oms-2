@@ -125,7 +125,7 @@ export default function MapPage() {
           {/* Replace your current TileLayer with this */}
           <TileLayer
             attribution="&copy; Google"
-            url="https://mt1.google.com/vt/lyrs=m&x={x}&y={y}&z={z}" // 'm' is for standard roadmap
+            url="https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}" // 'm' is for standard roadmap
             // Use "lyrs=s,h" for hybrid (satellite + landmarks)
             // Use "lyrs=y" for hybrid (better for landmarks)
           />
