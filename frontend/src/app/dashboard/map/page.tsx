@@ -122,7 +122,13 @@ export default function MapPage() {
           zoom={7}
           className="h-full w-full"
         >
-          <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
+          {/* Replace your current TileLayer with this */}
+          <TileLayer
+            attribution="&copy; Google"
+            url="https://mt1.google.com/vt/lyrs=m&x={x}&y={y}&z={z}" // 'm' is for standard roadmap
+            // Use "lyrs=s,h" for hybrid (satellite + landmarks)
+            // Use "lyrs=y" for hybrid (better for landmarks)
+          />
 
           {/* District Boundaries */}
           {geoJsonData && (
