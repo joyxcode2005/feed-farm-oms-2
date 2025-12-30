@@ -5,7 +5,7 @@
 import { useEffect, useState, useCallback } from "react";
 import { api } from "@/src/config";
 import toast from "react-hot-toast";
-import { X, Plus, Trash2, Loader2, Calendar, Filter, User, CheckCircle2, AlertCircle } from "lucide-react";
+import { X, Plus, Trash2, Loader2, Calendar, Filter, User, CheckCircle2, MapPin } from "lucide-react";
 import debounce from "lodash/debounce";
 import { WEST_BENGAL_DISTRICTS } from "../constants/districts";
 
@@ -38,6 +38,7 @@ interface OrderItemRow {
 export default function CreateOrderModal({ onClose, onCreated }: CreateOrderModalProps) {
   const [loading, setLoading] = useState(false);
   const [checkingPhone, setCheckingPhone] = useState(false);
+  const [geoLoading, setGeoLoading] = useState(false);
   
   // Data Store
   const [feedCategories, setFeedCategories] = useState<FeedCategory[]>([]);
@@ -53,6 +54,9 @@ export default function CreateOrderModal({ onClose, onCreated }: CreateOrderModa
   const [customerDistrict, setCustomerDistrict] = useState("");
   const [customerAddress, setCustomerAddress] = useState("");
   const [customerType, setCustomerType] = useState("SINGLE");
+  // New Location Fields
+  const [customerLatitude, setCustomerLatitude] = useState("");
+  const [customerLongitude, setCustomerLongitude] = useState("");
 
   // Order Form State
   const [deliveryDate, setDeliveryDate] = useState("");
@@ -97,6 +101,10 @@ export default function CreateOrderModal({ onClose, onCreated }: CreateOrderModa
           setCustomerDistrict(cust.district);
           setCustomerAddress(cust.address || "");
           setCustomerType(cust.type || "SINGLE");
+          // Existing customer coordinates might not be returned by this specific API, 
+          // but we reset them to empty to avoid confusion
+          setCustomerLatitude("");
+          setCustomerLongitude("");
           setIsNewCustomer(false);
           toast.success("Existing customer found!");
         }
@@ -107,6 +115,8 @@ export default function CreateOrderModal({ onClose, onCreated }: CreateOrderModa
           setCustomerName("");
           setCustomerDistrict("");
           setCustomerAddress("");
+          setCustomerLatitude("");
+          setCustomerLongitude("");
         }
       } finally {
         setCheckingPhone(false);
@@ -121,6 +131,8 @@ export default function CreateOrderModal({ onClose, onCreated }: CreateOrderModa
       setIsNewCustomer(false);
       setCustomerName("");
       setCustomerDistrict("");
+      setCustomerLatitude("");
+      setCustomerLongitude("");
       return;
     }
     checkPhone(phoneSearch);
@@ -130,7 +142,30 @@ export default function CreateOrderModal({ onClose, onCreated }: CreateOrderModa
     ? feedCategories.filter((f) => f.animalType.id === selectedAnimalType)
     : feedCategories;
 
-  // Handlers
+  // New Auto Location Handler
+  const handleAutoLocation = async () => {
+    if (!customerDistrict) return toast.error("Please select a district first");
+    
+    setGeoLoading(true);
+    try {
+      const query = `${customerAddress || ''}, ${customerDistrict}, West Bengal, India`;
+      const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&limit=1`);
+      const data = await res.json();
+
+      if (data && data.length > 0) {
+        setCustomerLatitude(data[0].lat);
+        setCustomerLongitude(data[0].lon);
+        toast.success("Location coordinates found!");
+      } else {
+        toast.error("Could not find specific coordinates. Please try refining the address.");
+      }
+    } catch (error) {
+      toast.error("Failed to fetch location data");
+    } finally {
+      setGeoLoading(false);
+    }
+  };
+
   const handleItemChange = (index: number, field: keyof OrderItemRow, value: any) => {
     const newItems = [...items];
     if (field === "feedCategoryId") {
@@ -151,7 +186,6 @@ export default function CreateOrderModal({ onClose, onCreated }: CreateOrderModa
     }
   };
 
-  // --- Updated Calculation Logic ---
   const subtotal = items.reduce((sum, item) => sum + (item.quantityBags * item.pricePerBag), 0);
   
   const discountAmount = 
@@ -187,12 +221,14 @@ export default function CreateOrderModal({ onClose, onCreated }: CreateOrderModa
           phone: phoneSearch,
           district: customerDistrict,
           address: customerAddress,
-          type: customerType
+          type: customerType,
+          // Include coordinates for new customer
+          latitude: customerLatitude ? parseFloat(customerLatitude) : null,
+          longitude: customerLongitude ? parseFloat(customerLongitude) : null,
         });
         finalCustomerId = custRes.data.data.id;
       }
 
-      // --- Updated Payload Preparation ---
       const payload: any = {
         customerId: finalCustomerId,
         deliveryDate,
@@ -203,7 +239,6 @@ export default function CreateOrderModal({ onClose, onCreated }: CreateOrderModa
         }))
       };
 
-      // Only add discount fields if they are valid for the backend
       if (discountType !== "NONE" && discountValue > 0) {
         payload.discountType = discountType;
         payload.discountValue = Number(discountValue);
@@ -287,20 +322,20 @@ export default function CreateOrderModal({ onClose, onCreated }: CreateOrderModa
 
               <div className={`col-span-full grid grid-cols-1 md:grid-cols-2 gap-5 transition-all duration-300 ${isNewCustomer || selectedCustomerId ? 'opacity-100 max-h-96' : 'opacity-0 max-h-0 hidden'}`}>
                  <div>
-    <label className="block text-xs font-medium text-zinc-500 mb-1">District</label>
-    <select 
-        className="w-full px-3 py-2 rounded-lg border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 disabled:bg-zinc-100 disabled:text-zinc-500"
-        value={customerDistrict}
-        onChange={(e) => setCustomerDistrict(e.target.value)}
-        disabled={!!selectedCustomerId}
-        required={isNewCustomer}
-    >
-        <option value="">Select District</option>
-        {WEST_BENGAL_DISTRICTS.map((d) => (
-            <option key={d} value={d}>{d}</option>
-        ))}
-    </select>
-</div>
+                    <label className="block text-xs font-medium text-zinc-500 mb-1">District</label>
+                    <select 
+                        className="w-full px-3 py-2 rounded-lg border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 disabled:bg-zinc-100 disabled:text-zinc-500"
+                        value={customerDistrict}
+                        onChange={(e) => setCustomerDistrict(e.target.value)}
+                        disabled={!!selectedCustomerId}
+                        required={isNewCustomer}
+                    >
+                        <option value="">Select District</option>
+                        {WEST_BENGAL_DISTRICTS.map((d) => (
+                            <option key={d} value={d}>{d}</option>
+                        ))}
+                    </select>
+                 </div>
                  <div>
                     <label className="block text-xs font-medium text-zinc-500 mb-1">Customer Type</label>
                     <select 
@@ -324,12 +359,49 @@ export default function CreateOrderModal({ onClose, onCreated }: CreateOrderModa
                       placeholder="Full Address"
                     />
                  </div>
+
+                 {/* NEW: Map Location Section (Only visible for New Customers) */}
+                 {isNewCustomer && (
+                   <div className="col-span-full p-3 bg-white dark:bg-zinc-800 rounded-lg border border-zinc-200 dark:border-zinc-700">
+                      <div className="flex justify-between items-center mb-3">
+                        <span className="text-xs font-medium text-zinc-700 dark:text-zinc-300">Map Location</span>
+                        <button
+                          type="button"
+                          onClick={handleAutoLocation}
+                          disabled={geoLoading || !customerDistrict}
+                          className="text-xs flex items-center gap-1 bg-blue-50 text-blue-600 px-2 py-1 rounded hover:bg-blue-100 disabled:opacity-50"
+                        >
+                          {geoLoading ? <Loader2 className="w-3 h-3 animate-spin" /> : <MapPin className="w-3 h-3" />}
+                          Auto-Detect
+                        </button>
+                      </div>
+                      <div className="grid grid-cols-2 gap-3">
+                        <input
+                          type="number"
+                          step="any"
+                          placeholder="Latitude"
+                          className="w-full px-2 py-1.5 text-xs rounded border border-zinc-300 dark:border-zinc-600 bg-white dark:bg-zinc-900"
+                          value={customerLatitude}
+                          onChange={(e) => setCustomerLatitude(e.target.value)}
+                        />
+                        <input
+                          type="number"
+                          step="any"
+                          placeholder="Longitude"
+                          className="w-full px-2 py-1.5 text-xs rounded border border-zinc-300 dark:border-zinc-600 bg-white dark:bg-zinc-900"
+                          value={customerLongitude}
+                          onChange={(e) => setCustomerLongitude(e.target.value)}
+                        />
+                      </div>
+                   </div>
+                 )}
               </div>
             </div>
           </div>
 
           {/* Section 2: Order Details */}
           <div className="space-y-4">
+             {/* ... (Rest of the order form remains unchanged) ... */}
              <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                 <div>
                   <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1">Delivery Date</label>

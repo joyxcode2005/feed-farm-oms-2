@@ -7,6 +7,8 @@ interface CreateCustomerInput {
   type?: "SINGLE" | "DISTRIBUTER";
   district: string;
   createdByAdminId?: string;
+  latitude?: number | null;
+  longitude?: number | null;
 }
 
 interface GetAllCustomersInput {
@@ -28,9 +30,18 @@ export async function checkExistingCustomer(phone: string) {
 }
 
 export async function createCustomerDB(input: CreateCustomerInput) {
-  const { name, phone, address, type, district, createdByAdminId } = input;
+  const { name, phone, address, type, district, createdByAdminId, latitude, longitude } = input;
   return prisma.customer.create({
-    data: { name, phone, address, type, district, createdByAdminId },
+    data: { 
+      name, 
+      phone, 
+      address, 
+      type, 
+      district, 
+      createdByAdminId,
+      latitude,
+      longitude
+    },
   });
 }
 
@@ -51,6 +62,8 @@ export async function getCustomersByDistrict(district: string, type?: string) {
       type: true,
       district: true,
       createdAt: true,
+      latitude: true,
+      longitude: true,
     },
     orderBy: { name: "asc" },
   });
@@ -90,6 +103,8 @@ export async function getCustomerByIdDB(input: { customerId: string }) {
       district: true,
       createdAt: true,
       updatedAt: true,
+      latitude: true,
+      longitude: true,
     },
   });
 }
@@ -155,6 +170,7 @@ export async function getCustomerLedgerDB(input: { customerId: string }) {
       dueAmount: true,
       createdAt: true,
     },
+    orderBy: { createdAt: "desc" }
   });
   const payments = await prisma.payment.findMany({
     where: { order: { customerId } },
@@ -165,11 +181,24 @@ export async function getCustomerLedgerDB(input: { customerId: string }) {
       paymentMethod: true,
       orderId: true,
     },
+    orderBy: { paymentDate: "desc" }
   });
+  
   const totalOrders = orders.length;
-  const totalPaid = payments.reduce((sum, p) => sum + p.amountPaid, 0);
-  const totalDue = orders.reduce((sum, o) => sum + o.dueAmount, 0);
-  return { summary: { totalOrders, totalPaid, totalDue }, orders, payments };
+  const totalPurchased = orders.reduce((sum, o) => sum + (o.finalAmount || 0), 0);
+  const totalPaid = payments.reduce((sum, p) => sum + (p.amountPaid || 0), 0);
+  const totalDue = orders.reduce((sum, o) => sum + (o.dueAmount || 0), 0);
+
+  return { 
+    summary: { 
+      totalOrders, 
+      totalPurchased,
+      totalPaid, 
+      totalDue 
+    }, 
+    orders, 
+    payments 
+  };
 }
 
 export async function getCustomerSnapshotsDB(input: any) {
@@ -187,7 +216,7 @@ export async function getCustomerSnapshotsDB(input: any) {
   });
 }
 
-// NEW FUNCTION: Aggregates financial totals for the summary page
+// --- UPDATED FUNCTION ---
 export async function getAllCustomersFinancialSummaryDB() {
   const customers = await prisma.customer.findMany({
     select: {
@@ -195,6 +224,11 @@ export async function getAllCustomersFinancialSummaryDB() {
       name: true,
       phone: true,
       district: true,
+      // Include these for the map:
+      latitude: true,
+      longitude: true,
+      type: true,
+      address: true,
       orders: {
         select: {
           finalAmount: true,
@@ -212,9 +246,10 @@ export async function getAllCustomersFinancialSummaryDB() {
         acc.totalPurchased += order.finalAmount;
         acc.totalPaid += order.paidAmount;
         acc.totalOutstanding += order.dueAmount;
+        acc.totalOrders += 1;
         return acc;
       },
-      { totalPurchased: 0, totalPaid: 0, totalOutstanding: 0 },
+      { totalPurchased: 0, totalPaid: 0, totalOutstanding: 0, totalOrders: 0 },
     );
 
     return {
@@ -222,6 +257,10 @@ export async function getAllCustomersFinancialSummaryDB() {
       name: customer.name,
       phone: customer.phone,
       district: customer.district,
+      latitude: customer.latitude,
+      longitude: customer.longitude,
+      type: customer.type,
+      address: customer.address,
       ...totals,
     };
   });
